@@ -222,6 +222,7 @@ async function cargarDeLaNube() {
       modoInflacion = d.modoInflacion || 'indices';
       modelosData = d.modelosData || {};
       cierreData = d.cierreData || [];
+      ensurePNCuentas();
       
       // Refrescamos la pantalla para mostrar los datos recién descargados
       const activeModule = document.querySelector('.nav-item.active').dataset.module;
@@ -1367,7 +1368,7 @@ document.addEventListener('click', function(e) {
 const ELEMENTOS = {
   '1': { nombre: 'ACTIVO', tieneCorrencia: true },
   '2': { nombre: 'PASIVO', tieneCorrencia: true },
-  '3': { nombre: 'PATRIMONIO NETO', tieneCorrencia: false },
+  '3': { nombre: 'PATRIMONIO NETO', tieneCorrencia: true, subLabels: ['Aporte de los propietarios', 'Resultados acumulados'] },
   '4': { nombre: 'RESULTADOS POSITIVOS', tieneCorrencia: false },
   '5': { nombre: 'RESULTADOS NEGATIVOS', tieneCorrencia: false }
 };
@@ -1381,11 +1382,32 @@ const RUBROS = {
     'Corriente': ['Proveedores de bienes y servicios', 'Préstamos y otros pasivos financieros', 'Deudas fiscales', 'Deudas laborales y previsionales', 'Deudas en especie', 'Deudas con partes relacionadas', 'Otras deudas', 'Subsidios y otras ayudas gubernamentales', 'Previsiones'],
     'No corriente': ['Proveedores de bienes y servicios', 'Préstamos y otros pasivos financieros', 'Deudas fiscales', 'Deudas laborales y previsionales', 'Deudas en especie', 'Deudas con partes relacionadas', 'Otras deudas', 'Subsidios y otras ayudas gubernamentales', 'Pasivo neto por impuesto diferido', 'Previsiones']
   },
-  '3': { '_': ['Capital social', 'Ajuste de capital', 'Aportes irrevocables', 'Prima de emisión', 'Ganancias reservadas', 'Resultados no asignados'] },
+  '3': { 'Aporte de los propietarios': ['Capital', 'Ajuste de Capital', 'Aportes Irrevocables de Capital', 'Primas de Emisión'], 'Resultados acumulados': ['Ganancias reservadas', 'Resultados diferidos', 'Resultados no asignados'] },
   '4': { '_': ['Ingresos por ventas de bienes y prestación de servicios', 'Otros ingresos'] },
   '5': { '_': ['Costo de los bienes vendidos y servicios prestados', 'Gastos de comercialización', 'Gastos de administración', 'Otros gastos operativos', 'Cambios en el valor razonable de propiedades de inversión', 'Pérdidas por desvalorización', 'Otros resultados financieros y por tenencia', 'Otros egresos'] }
 };
 
+const CUENTAS_PN_FIJAS = [
+  { elemento:'3', correncia:'Aporte de los propietarios', rubro:'Capital', nombre:'Capital', codigo:'3.1.01.001', tipoMoneda:'no_monetaria' },
+  { elemento:'3', correncia:'Aporte de los propietarios', rubro:'Ajuste de Capital', nombre:'Ajuste de Capital', codigo:'3.1.02.001', tipoMoneda:'no_monetaria' },
+  { elemento:'3', correncia:'Aporte de los propietarios', rubro:'Aportes Irrevocables de Capital', nombre:'Aportes Irrevocables de Capital', codigo:'3.1.03.001', tipoMoneda:'no_monetaria' },
+  { elemento:'3', correncia:'Aporte de los propietarios', rubro:'Primas de Emisión', nombre:'Primas de Emisión', codigo:'3.1.04.001', tipoMoneda:'no_monetaria' },
+  { elemento:'3', correncia:'Resultados acumulados', rubro:'Ganancias reservadas', nombre:'Reserva Legal', codigo:'3.2.01.001', tipoMoneda:'no_monetaria' },
+  { elemento:'3', correncia:'Resultados acumulados', rubro:'Ganancias reservadas', nombre:'Reserva Estatutaria', codigo:'3.2.01.002', tipoMoneda:'no_monetaria' },
+  { elemento:'3', correncia:'Resultados acumulados', rubro:'Ganancias reservadas', nombre:'Reserva Facultativa', codigo:'3.2.01.003', tipoMoneda:'no_monetaria' },
+  { elemento:'3', correncia:'Resultados acumulados', rubro:'Resultados diferidos', nombre:'Resultados Diferidos', codigo:'3.2.02.001', tipoMoneda:'no_monetaria' },
+  { elemento:'3', correncia:'Resultados acumulados', rubro:'Resultados no asignados', nombre:'A. R. E. A.', codigo:'3.2.03.001', tipoMoneda:'no_monetaria' },
+  { elemento:'3', correncia:'Resultados acumulados', rubro:'Resultados no asignados', nombre:'Resultados Acumulados de Ejercicios Anteriores', codigo:'3.2.03.002', tipoMoneda:'no_monetaria' },
+  { elemento:'3', correncia:'Resultados acumulados', rubro:'Resultados no asignados', nombre:'Resultado del Ejercicio', codigo:'3.2.03.003', tipoMoneda:'no_monetaria' }
+];
+
+function ensurePNCuentas() {
+  CUENTAS_PN_FIJAS.forEach(pn => {
+    const exists = cuentas.find(c => c.elemento === '3' && c.nombre.toLowerCase() === pn.nombre.toLowerCase());
+    if (!exists) cuentas.push({...pn});
+  });
+  cuentas.sort((a, b) => a.codigo.localeCompare(b.codigo));
+}
 
 function renderPlan(el) {
   el.innerHTML = `
@@ -1485,11 +1507,22 @@ function onElementoChange() {
   }
 
   document.getElementById('stepNum1').classList.add('done');
+  if (val === '3') {
+    step2.classList.add('disabled');
+    step3.classList.add('disabled');
+    step4.classList.add('disabled');
+    step5.classList.add('disabled');
+    document.getElementById('selCorrencia').value = '';
+    alert('Las cuentas del Patrimonio Neto se generan automáticamente. Miralas en el árbol de abajo.');
+    hidePreview();
+    updateBtn();
+    return;
+  }
 
   if (elem.tieneCorrencia) {
     step2.classList.remove('disabled');
     const sel = document.getElementById('selCorrencia');
-    sel.innerHTML = '<option value="">— Seleccionar —</option><option value="Corriente">Corriente</option><option value="No corriente">No corriente</option>';
+    if (elem.subLabels) { sel.innerHTML = '<option value="">— Seleccionar —</option>'; elem.subLabels.forEach(label => { sel.innerHTML += '<option value="'+label+'">'+label+'</option>'; }); } else { sel.innerHTML = '<option value="">— Seleccionar —</option><option value="Corriente">Corriente</option><option value="No corriente">No corriente</option>'; }
   } else {
     step2.classList.add('disabled');
     document.getElementById('selCorrencia').value = '_skip_';
@@ -1605,7 +1638,7 @@ function getCodigo() {
   if (elem.tieneCorrencia) {
     const corrVal = document.getElementById('selCorrencia').value;
     if (!corrVal) return code;
-    code += '.' + (corrVal === 'Corriente' ? '1' : '2');
+    if (elem.subLabels) { code += '.' + (elem.subLabels.indexOf(corrVal) + 1); } else { code += '.' + (corrVal === 'Corriente' ? '1' : '2'); }
   } else {
     code += '.0';
   }
@@ -1712,7 +1745,7 @@ function recalcCodes() {
   Object.values(groups).forEach(group => {
     group.forEach((c, i) => {
       const elem = c.elemento;
-      const corrPart = ELEMENTOS[elem].tieneCorrencia ? (c.correncia === 'Corriente' ? '1' : '2') : '0';
+      const elemDef = ELEMENTOS[elem]; let corrPart = '0'; if (elemDef.tieneCorrencia) { if (elemDef.subLabels) { corrPart = String(elemDef.subLabels.indexOf(c.correncia) + 1); } else { corrPart = c.correncia === 'Corriente' ? '1' : '2'; } }
       const elemRubros = ELEMENTOS[elem].tieneCorrencia ? RUBROS[elem][c.correncia] : RUBROS[elem]['_'];
       const rubroIdx = elemRubros ? elemRubros.indexOf(c.rubro) + 1 : 0;
       c.codigo = elem + '.' + corrPart + '.' + String(rubroIdx).padStart(2, '0') + '.' + String(i + 1).padStart(2, '0');
@@ -1721,6 +1754,7 @@ function recalcCodes() {
 }
 
 function deleteCuenta(codigo) {
+    if (codigo.startsWith('3.')) return alert('Las cuentas del Patrimonio Neto no se pueden eliminar.');
   cuentas = cuentas.filter(c => c.codigo !== codigo);
   recalcCodes();
   renderTree();
@@ -1772,7 +1806,7 @@ function renderTree() {
       Object.keys(elem.children).forEach(corrKey => {
         const corr = elem.children[corrKey];
         const corrId = elemId + '_' + corrKey.replace(/\s/g, '');
-        const corrCode = elemKey + '.' + (corrKey === 'Corriente' ? '1' : '2');
+       const elemDef2 = ELEMENTOS[elemKey]; const corrCode = elemKey + '.' + (elemDef2.subLabels ? (elemDef2.subLabels.indexOf(corrKey) + 1) : (corrKey === 'Corriente' ? '1' : '2'));
         const corrCount = Object.values(corr.children).reduce((s, r) => s + r.cuentas.length, 0);
 
         html += `<div class="tree-node">
@@ -1808,6 +1842,21 @@ function renderTree() {
 
 function renderRubroNode(rubro, rubroId, level) {
   const chevron = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="9 6 15 12 9 18"/></svg>';
+  
+  // Si el rubro tiene 1 sola cuenta con el mismo nombre, colapsar en una sola fila
+  if (rubro.cuentas.length === 1 && rubro.cuentas[0].nombre === rubro.nombre) {
+    const c = rubro.cuentas[0];
+    const badgeMonetaria = c.tipoMoneda === 'monetaria' 
+      ? '<span style="margin-left:8px;font-size:10px;padding:2px 6px;border-radius:4px;background:var(--surface-3);color:var(--text-secondary)" title="Monetaria">M</span>'
+      : '<span style="margin-left:8px;font-size:10px;padding:2px 6px;border-radius:4px;background:rgba(22,101,52,0.1);color:var(--forest)" title="No Monetaria">NM</span>';
+    return `<div class="tree-row level-${level}">
+      <div style="width:20px;flex-shrink:0"></div>
+      <span class="tree-code">${c.codigo.split('.').slice(0, 3).join('.')}</span>
+      <span class="tree-label">${c.nombre} ${badgeMonetaria}</span>
+      ${c.elemento !== '3' ? '<button class="btn-delete-cuenta" onclick="event.stopPropagation();deleteCuenta(\'' + c.codigo + '\')" title="Eliminar cuenta">×</button>' : ''}
+    </div>`;
+  }
+
   let html = `<div class="tree-node">
     <div class="tree-row level-${level}" onclick="toggleTree('${rubroId}')">
       <div class="tree-toggle expanded" id="toggle_${rubroId}">${chevron}</div>
@@ -1984,12 +2033,14 @@ function renderESP(container, saldosCuentas) {
   html += `<tr class="esp-elem-row"><td colspan="2" style="padding-top:20px;"><strong>P A T R I M O N I O&nbsp;&nbsp;&nbsp;N E T O</strong></td></tr>`;
   
   let totalPN = 0;
-  RUBROS['3']['_'].forEach(rName => {
-    const totalR = sumarSaldosRubro(saldosCuentas, '3', '_', rName);
-    if (totalR !== 0) {
-      html += `<tr class="esp-rubro-row PN-rubro"><td>${rName} (según Estado correspondiente)</td><td style="text-align:right;">${formatMoney(totalR)}</td></tr>`;
-      totalPN += totalR;
-    }
+  (ELEMENTOS['3'].subLabels || ['_']).forEach(sub => {
+    (RUBROS['3'][sub] || []).forEach(rName => {
+      const totalR = sumarSaldosRubro(saldosCuentas, '3', sub, rName);
+      if (totalR !== 0) {
+        html += `<tr class="esp-rubro-row PN-rubro"><td>${rName}</td><td style="text-align:right;">${formatMoney(totalR)}</td></tr>`;
+        totalPN += totalR;
+      }
+    });
   });
 
   let totalRPos = 0;
@@ -2223,6 +2274,7 @@ function deleteCierreRow(index) {
   saveData();
   renderCierre(document.getElementById('contentArea'));
 }
+ensurePNCuentas();
 
 // INICIALIZACIÓN
 renderDashboard(document.getElementById('contentArea'));
@@ -2406,6 +2458,7 @@ async function importarDatos(event) {
       modoInflacion = data.modoInflacion || 'indices';
       modelosData = data.modelosData || {};
       cierreData = data.cierreData || [];
+      ensurePNCuentas();
       
       await saveData();
       alert('¡Trabajo cargado con éxito!');
