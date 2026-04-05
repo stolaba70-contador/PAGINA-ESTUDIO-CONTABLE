@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sistema Contable — Plataforma Educativa</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Crimson+Pro:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&family=Source+Sans+3:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<div id="authScreen" class="auth-screen">
+  <div class="auth-card">
+    <div class="brand-icon" style="margin: 0 auto 15px; width: 48px; height: 48px; background: var(--navy); color: white; display: flex; align-items: center; justify-content: center; border-radius: 12px;">
+      <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
+    </div>
+    <h2 id="authTitle" style="text-align: center; color: var(--navy); margin-bottom: 5px; font-family: var(--serif);">Iniciar Sesión</h2>
+    <p id="authSubtitle" style="text-align: center; color: var(--text-secondary); margin-bottom: 25px; font-size: 14px;">Ingresá a la plataforma educativa</p>
+
+    <form id="authForm" onsubmit="handleAuth(event)">
+      <div class="form-group">
+        <label>Correo Electrónico</label>
+        <input type="email" id="authEmail" required placeholder="alumno@correo.com" style="width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: 6px; box-sizing: border-box;">
+      </div>
+      <div class="form-group" style="margin-top: 15px;">
+        <label>Contraseña</label>
+        <input type="password" id="authPassword" required placeholder="••••••••" style="width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: 6px; box-sizing: border-box;">
+      </div>
+      <button type="submit" class="btn-submit" style="width: 100%; margin-top: 25px; padding: 12px; font-size: 16px;">Ingresar</button>
+    </form>
+
+    <div style="text-align: center; margin-top: 20px; font-size: 14px;">
+      <a href="#" onclick="toggleAuthMode()" id="authModeBtn" style="color: var(--navy); font-weight: 600; text-decoration: none;">¿No tenés cuenta? Registrate acá</a>
+    </div>
+  </div>
+</div>
+
+<div class="mobile-header app-hidden">
+  <button class="hamburger" onclick="toggleSidebar()">
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+  </button>
+  <div class="brand-icon">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
+  </div>
+  <span style="font-family:var(--serif);font-size:15px;font-weight:600;">Sistema Contable</span>
+</div>
+<div class="sidebar-overlay" id="sidebarOverlay" onclick="toggleSidebar()"></div>
+
+<div class="app-layout app-hidden">
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-header">
+      <div class="sidebar-brand">
+        <div class="brand-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
+        </div>
+        <div class="brand-text"><h1>Sistema Contable</h1><span>Plataforma Educativa</span></div>
+      </div>
+    </div>
+    <div class="collapse-toggle">
+      <button class="collapse-btn" onclick="toggleCollapse()" title="Contraer menú">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="11 17 6 12 11 7"/><polyline points="18 17 13 12 18 7"/></svg>
+        <span class="collapse-btn-text">Contraer</span>
+      </button>
+    </div>
+    <nav class="sidebar-nav">
+      <div class="nav-label">Módulos</div>
+      <div class="nav-item active" data-module="home" onclick="navigate('home')"><div class="nav-item-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg></div><span class="nav-item-text">Inicio</span><span class="tooltip">Inicio</span></div>
+      <div class="nav-item" data-module="diario" onclick="navigate('diario')"><div class="nav-item-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20"/><line x1="9" y1="8" x2="16" y2="8"/><line x1="9" y1="12" x2="14" y2="12"/></svg></div><span class="nav-item-text">Libro Diario</span><span class="nav-item-num">I</span><span class="tooltip">Libro Diario</span></div>
+      <div class="nav-item" data-module="mayores" onclick="navigate('mayores')"><div class="nav-item-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9" rx="1"/><rect x="14" y="3" width="7" height="5" rx="1"/><rect x="14" y="12" width="7" height="9" rx="1"/><rect x="3" y="16" width="7" height="5" rx="1"/></svg></div><span class="nav-item-text">Libros Mayores</span><span class="nav-item-num">II</span><span class="tooltip">Libros Mayores</span></div>
+      <div class="nav-item" data-module="plan" onclick="navigate('plan')"><div class="nav-item-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/><line x1="9" y1="12" x2="15" y2="12"/><line x1="9" y1="16" x2="13" y2="16"/></svg></div><span class="nav-item-text">Plan de Cuentas</span><span class="nav-item-num">III</span><span class="tooltip">Plan de Cuentas</span></div>
+      <div class="nav-item" data-module="inflacion" onclick="navigate('inflacion')"><div class="nav-item-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg></div><span class="nav-item-text">Ajuste por Inflación</span><span class="nav-item-num">IV</span><span class="tooltip">Ajuste por Inflación</span></div>
+      <div class="nav-item" data-module="cierre" onclick="navigate('cierre')"><div class="nav-item-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></div><span class="nav-item-text">Medición al Cierre</span><span class="nav-item-num">V</span><span class="tooltip">Medición al Cierre</span></div>
+      <div class="nav-item" data-module="estados" onclick="navigate('estados')"><div class="nav-item-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="16" y2="17"/></svg></div><span class="nav-item-text">Estados Contables</span><span class="nav-item-num">VI</span><span class="tooltip">Estados Contables</span></div>
+      <div class="nav-item" data-module="stock" onclick="navigate('stock')"><div class="nav-item-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg></div><span class="nav-item-text">Stock (PEPS)</span><span class="nav-item-num">VII</span><span class="tooltip">Stock (PEPS)</span></div>
+      <div class="nav-item" data-module="modelos" onclick="navigate('modelos')"><div class="nav-item-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="3" x2="9" y2="21"/><line x1="15" y1="3" x2="15" y2="21"/></svg></div><span class="nav-item-text">Modelos Contables</span><span class="nav-item-num">VIII</span><span class="tooltip">Modelos Contables</span></div>
+    </nav>
+    <div class="sidebar-footer" style="flex-direction: column; gap: 10px;">
+      <div class="user-badge">
+        <div class="user-avatar" id="navAvatar">AL</div>
+        <div class="user-info">
+          <div class="user-name" id="navName">Alumno</div>
+          <div class="user-role">Estudiante</div>
+        </div>
+      </div>
+      <button onclick="cerrarSesion()" style="width: 100%; padding: 8px; background: var(--burgundy); color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 12px; font-weight: 600;">Cerrar Sesión</button>
+    </div>
+  </aside>
+
+  <main class="main-content">
+    <div class="topbar">
+      <div class="topbar-title" id="breadcrumb"><strong>Inicio</strong></div>
+      <div class="topbar-actions">
+      </div>
+    </div>
+    <div class="content-area" id="contentArea"></div>
+  </main>
+</div>
+
+<div class="modal-overlay" id="modalAsiento">
+  <div class="modal">
+    <div class="modal-header">
+      <h3>Nuevo Asiento Contable</h3>
+      <button class="modal-close" onclick="closeModal()"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+    </div>
+    <div class="modal-body">
+      <div class="form-row" style="align-items: flex-end;">
+  <div class="form-group"><label>Fecha</label><input type="date" id="asientoFecha"></div>
+  <div class="form-group" style="flex:2"><label>Glosa / Descripción</label><input type="text" id="asientoGlosa" placeholder="Ej: Por compra de mercadería"></div>
+  <div class="form-group" style="flex:initial; padding-bottom:10px;">
+    <label style="display:flex; align-items:center; gap:6px; cursor:pointer; text-transform:none; letter-spacing:normal; color:var(--burgundy);">
+      <input type="checkbox" id="asientoCierre" style="width:16px; height:16px; cursor:pointer;" onchange="revaluarLineasStock()">
+      <strong>Es asiento de cierre</strong>
+    </label>
+  </div>
+</div>
+
+      <div class="lines-section">
+        <div class="lines-section-title" style="color:var(--navy)">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="7 17 17 7"/><polyline points="7 7 17 7 17 17"/></svg>
+          Cuentas Deudoras
+          <span class="badge" style="background:rgba(27,42,74,0.1);color:var(--navy)">Debe</span>
+        </div>
+        <div id="lineasDebe"></div>
+        <button class="btn-add-line" onclick="addLine('debe')">+ Agregar cuenta deudora</button>
+      </div>
+
+      <div class="lines-section">
+        <div class="lines-section-title" style="color:var(--burgundy)">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="17 7 7 17"/><polyline points="17 17 7 17 7 7"/></svg>
+          Cuentas Acreedoras
+          <span class="badge" style="background:rgba(122,35,50,0.1);color:var(--burgundy)">Haber</span>
+        </div>
+        <div id="lineasHaber"></div>
+        <button class="btn-add-line" onclick="addLine('haber')">+ Agregar cuenta acreedora</button>
+      </div>
+
+      <div class="balance-bar unbalanced" id="balanceBar">
+        <span><span class="bal-label">Debe:</span> $<span id="totalDebe">0.00</span></span>
+        <span id="balanceStatus">⚠ Desbalanceado</span>
+        <span><span class="bal-label">Haber:</span> $<span id="totalHaber">0.00</span></span>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-cancel" onclick="closeModal()">Cancelar</button>
+      <button class="btn-submit" id="btnGuardar" disabled onclick="guardarAsiento()">Guardar Asiento</button>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+<script src="script.js"></script>
+</body>
+</html>
