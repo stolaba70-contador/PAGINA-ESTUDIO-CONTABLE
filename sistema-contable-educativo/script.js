@@ -1337,8 +1337,8 @@ function showAutocomplete(input) {
 
   const matches = val ? cuentas.filter(c => c.nombre.toLowerCase().includes(val) || c.codigo.includes(val)) : cuentas;
 
-  if (matches.length === 0) {
-    list.innerHTML = '<div class="autocomplete-item empty-msg">No se encontraron cuentas que coincidan</div>';
+ if (matches.length === 0) {
+    list.innerHTML = '<div class="autocomplete-item empty-msg">No se encontraron cuentas que coincidan</div><div class="autocomplete-item" style="color:var(--navy);font-weight:600;cursor:pointer;" onclick="openMiniPlan()">+ Agregar cuenta</div>';
   } else {
     matches.forEach(m => {
       const item = document.createElement('div');
@@ -2492,4 +2492,126 @@ function revaluarLineasStock() {
   inputsCuentas.forEach(input => {
     toggleStockFields(input);
   });
+}
+/* ══════════════════════════════════════════
+   MINI PLAN - CREAR CUENTA DESDE EL MODAL
+   ══════════════════════════════════════════ */
+let mpInputOrigen = null;
+
+function openMiniPlan() {
+  document.querySelectorAll('.autocomplete-list').forEach(l => l.style.display = 'none');
+  mpInputOrigen = document.querySelector('.line-cuenta:focus') || document.querySelector('.line-cuenta');
+  document.getElementById('mpElemento').value = '';
+  document.getElementById('mpCorrencia').value = '';
+  document.getElementById('mpCorrencia').disabled = true;
+  document.getElementById('mpRubro').innerHTML = '<option value="">— Seleccionar —</option>';
+  document.getElementById('mpRubro').disabled = true;
+  document.getElementById('mpNombre').value = '';
+  document.getElementById('mpNombre').disabled = true;
+  document.getElementById('mpMonetaria').value = '';
+  document.getElementById('mpMonetaria').disabled = true;
+  document.getElementById('modalMiniPlan').classList.add('open');
+}
+
+function closeMiniPlan() {
+  document.getElementById('modalMiniPlan').classList.remove('open');
+}
+
+function mpOnElemento() {
+  const val = document.getElementById('mpElemento').value;
+  const elem = ELEMENTOS[val];
+  const selCorr = document.getElementById('mpCorrencia');
+  const selRubro = document.getElementById('mpRubro');
+  
+  selRubro.innerHTML = '<option value="">— Seleccionar —</option>';
+  selRubro.disabled = true;
+  document.getElementById('mpNombre').value = '';
+  document.getElementById('mpNombre').disabled = true;
+  document.getElementById('mpMonetaria').value = '';
+  document.getElementById('mpMonetaria').disabled = true;
+
+  if (!val) { selCorr.disabled = true; return; }
+
+  if (val === '3') {
+    alert('Las cuentas del Patrimonio Neto se generan automáticamente.');
+    document.getElementById('mpElemento').value = '';
+    selCorr.disabled = true;
+    return;
+  }
+
+  if (elem.tieneCorrencia) {
+    selCorr.disabled = false;
+    if (elem.subLabels) {
+      selCorr.innerHTML = '<option value="">— Seleccionar —</option>';
+      elem.subLabels.forEach(l => selCorr.innerHTML += '<option value="'+l+'">'+l+'</option>');
+    } else {
+      selCorr.innerHTML = '<option value="">— Seleccionar —</option><option value="Corriente">Corriente</option><option value="No corriente">No corriente</option>';
+    }
+  } else {
+    selCorr.disabled = true;
+    selCorr.innerHTML = '<option value="_skip_">—</option>';
+    selCorr.value = '_skip_';
+    const rubros = RUBROS[val]['_'] || [];
+    selRubro.innerHTML = '<option value="">— Seleccionar —</option>';
+    rubros.forEach(r => selRubro.innerHTML += '<option value="'+r+'">'+r+'</option>');
+    selRubro.disabled = false;
+  }
+}
+
+function mpOnCorrencia() {
+  const elemVal = document.getElementById('mpElemento').value;
+  const corrVal = document.getElementById('mpCorrencia').value;
+  const selRubro = document.getElementById('mpRubro');
+  
+  selRubro.innerHTML = '<option value="">— Seleccionar —</option>';
+  document.getElementById('mpNombre').value = '';
+  document.getElementById('mpNombre').disabled = true;
+  document.getElementById('mpMonetaria').value = '';
+  document.getElementById('mpMonetaria').disabled = true;
+
+  if (!corrVal) { selRubro.disabled = true; return; }
+
+  const rubros = RUBROS[elemVal]?.[corrVal] || [];
+  rubros.forEach(r => selRubro.innerHTML += '<option value="'+r+'">'+r+'</option>');
+  selRubro.disabled = false;
+}
+
+function mpOnRubro() {
+  const val = document.getElementById('mpRubro').value;
+  if (val) {
+    document.getElementById('mpNombre').disabled = false;
+    document.getElementById('mpNombre').focus();
+    document.getElementById('mpMonetaria').disabled = false;
+  } else {
+    document.getElementById('mpNombre').disabled = true;
+    document.getElementById('mpMonetaria').disabled = true;
+  }
+}
+
+function mpGuardar() {
+  const elemVal = document.getElementById('mpElemento').value;
+  const corrSel = document.getElementById('mpCorrencia');
+  const correncia = (!ELEMENTOS[elemVal].tieneCorrencia) ? '_' : corrSel.value;
+  const rubro = document.getElementById('mpRubro').value;
+  const nombre = document.getElementById('mpNombre').value.trim();
+  const tipoMoneda = document.getElementById('mpMonetaria').value;
+
+  if (!elemVal || !rubro || !nombre || !tipoMoneda) return alert('Completá todos los campos.');
+  if (ELEMENTOS[elemVal].tieneCorrencia && !correncia) return alert('Seleccioná la clasificación.');
+
+  const exists = cuentas.find(c => c.elemento === elemVal && c.correncia === correncia && c.rubro === rubro && c.nombre.toLowerCase() === nombre.toLowerCase());
+  if (exists) return alert('Ya existe esa cuenta.');
+
+  cuentas.push({ elemento: elemVal, correncia, rubro, nombre, codigo: '', tipoMoneda });
+  recalcCodes();
+  saveData();
+
+  closeMiniPlan();
+
+  if (mpInputOrigen) {
+    mpInputOrigen.value = nombre;
+    toggleStockFields(mpInputOrigen);
+  }
+
+  alert('Cuenta "' + nombre + '" creada con éxito.');
 }
