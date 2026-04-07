@@ -281,8 +281,8 @@ function renderDashboard(el) {
       </div>
       <div style="display:flex; gap:10px; background:var(--surface-2); padding:15px; border-radius:8px; border:1px solid var(--border); flex-wrap:wrap;">
         <input type="file" id="fileImport" style="display:none" accept=".json" onchange="importarDatos(event)">
-        <button class="btn-asiento" style="background:var(--forest); border:none; color:#fff;" onclick="exportarDatos()">📥 Guardar trabajo</button>
-        <button class="btn-asiento" style="background:var(--navy); border:none; color:#fff;" onclick="document.getElementById('fileImport').click()">📤 Cargar trabajo</button>
+        <button class="btn-asiento" style="background:var(--forest); border:none; color:#fff;" onclick="exportarDatos()">📥 Guardar JSON</button>
+        <button class="btn-asiento" style="background:var(--navy); border:none; color:#fff;" onclick="document.getElementById('fileImport').click()">📤 Cargar JSON</button>
         <button class="btn-asiento" style="background:#4338ca; border:none; color:#fff;" onclick="generarReporte()">🖨️ Generar PDF</button>
         <button class="btn-asiento" style="background:var(--burgundy); border:none; color:#fff;" onclick="limpiarSistema()">🗑️ Nueva Consigna</button>
       </div>
@@ -1890,6 +1890,38 @@ function toggleTree(id) {
   if (toggle) toggle.classList.toggle('expanded');
 }
 
+function getSaldosPorCuentaModelo(modelIdx) {
+  const saldos = {};
+  cuentas.forEach(c => saldos[c.nombre.toLowerCase()] = 0);
+  
+  asientos.forEach((a, idx) => {
+    if (!a) return;
+    (a.debe || []).forEach((d, di) => {
+      const key = d.cuenta.toLowerCase();
+      if (!saldos.hasOwnProperty(key)) return;
+      const lk = 'd' + di;
+      const keyD = idx + '_' + lk + '_' + modelIdx + '_d';
+      const keyH = idx + '_' + lk + '_' + modelIdx + '_h';
+      const valD = modelosData[keyD] !== undefined ? modelosData[keyD] : (a.esCierre ? 0 : d.monto);
+      const valH = modelosData[keyH] !== undefined ? modelosData[keyH] : 0;
+      saldos[key] += parseFloat(valD) || 0;
+      saldos[key] -= parseFloat(valH) || 0;
+    });
+    (a.haber || []).forEach((h, hi) => {
+      const key = h.cuenta.toLowerCase();
+      if (!saldos.hasOwnProperty(key)) return;
+      const lk = 'h' + hi;
+      const keyD = idx + '_' + lk + '_' + modelIdx + '_d';
+      const keyH = idx + '_' + lk + '_' + modelIdx + '_h';
+      const valD = modelosData[keyD] !== undefined ? modelosData[keyD] : 0;
+      const valH = modelosData[keyH] !== undefined ? modelosData[keyH] : (a.esCierre ? 0 : h.monto);
+      saldos[key] += parseFloat(valD) || 0;
+      saldos[key] -= parseFloat(valH) || 0;
+    });
+  });
+  return saldos;
+}
+
 /* ══════════════════════════════════════════
    ESTADOS CONTABLES
    ══════════════════════════════════════════ */
@@ -1931,6 +1963,7 @@ function formatoParentesis(valor) {
 }
 
 let currentEstadoTab = 'esp';
+let currentEstadoModel = 0;
 
 function renderEstadosOverview(el) {
   if (asientos.length === 0 || cuentas.length === 0) {
@@ -1938,36 +1971,60 @@ function renderEstadosOverview(el) {
     return;
   }
 
+  const modelTabs = ['Original','M1','M2','M3','M4','M5','M6'];
+  const tabsHTML = modelTabs.map((m, i) => 
+    `<button class="tab-btn ${currentEstadoModel === i ? 'active' : ''}" onclick="switchEstadoModel(${i})">${i === 0 ? 'EECC Original' : 'EECC ' + m}</button>`
+  ).join('');
+
   el.innerHTML = `
     <div class="mod-toolbar" style="margin-bottom: 10px;"><h2>Estados Contables</h2></div>
-    <div class="estado-tabs">
-      <button class="tab-btn active" id="tab-esp" onclick="switchEstado('esp')">Estado de Situación Patrimonial</button>
-      <button class="tab-btn" id="tab-er" onclick="switchEstado('er')">Estado de Resultados</button>
+    <div class="estado-tabs" style="flex-wrap:wrap;">${tabsHTML}</div>
+    <div class="estado-tabs" style="margin-top:8px;">
+      <button class="tab-btn ${currentEstadoTab === 'esp' ? 'active' : ''}" id="tab-esp" onclick="switchEstado('esp')">Estado de Situación Patrimonial</button>
+      <button class="tab-btn ${currentEstadoTab === 'er' ? 'active' : ''}" id="tab-er" onclick="switchEstado('er')">Estado de Resultados</button>
     </div>
     <div id="estadoContentContainer"></div>
   `;
-  switchEstado(currentEstadoTab);
+  renderEstadoActual();
+}
+
+
+function switchEstadoModel(idx) {
+  currentEstadoModel = idx;
+  renderEstadosOverview(document.getElementById('contentArea'));
 }
 
 function switchEstado(tab) {
   currentEstadoTab = tab;
-  document.getElementById('tab-esp').classList.toggle('active', tab === 'esp');
-  document.getElementById('tab-er').classList.toggle('active', tab === 'er');
-  
+  document.getElementById('tab-esp')?.classList.toggle('active', tab === 'esp');
+  document.getElementById('tab-er')?.classList.toggle('active', tab === 'er');
+  renderEstadoActual();
+}
+
+function renderEstadoActual() {
   const container = document.getElementById('estadoContentContainer');
-  const saldos = getSaldosPorCuenta(); 
+  if (!container) return;
   
-  if (tab === 'esp') {
-    renderESP(container, saldos);
+  let saldos;
+  if (currentEstadoModel === 0) {
+    saldos = getSaldosPorCuenta();
   } else {
-    renderER(container, saldos);
+    saldos = getSaldosPorCuentaModelo(currentEstadoModel - 1);
+  }
+  
+  const modelLabel = currentEstadoModel === 0 ? '' : ' — Modelo ' + currentEstadoModel;
+  
+  if (currentEstadoTab === 'esp') {
+    renderESP(container, saldos, modelLabel);
+  } else {
+    renderER(container, saldos, modelLabel);
   }
 }
 
-function renderESP(container, saldosCuentas) {
+function renderESP(container, saldosCuentas, modelLabel) {
   let html = `
     <div class="hoja-rayada" style="padding: 20px;">
-      <h3 style="text-align:center; font-family:var(--serif); margin-bottom: 20px;">ESTADO DE SITUACIÓN PATRIMONIAL al cierre del ejercicio</h3>
+      <h3 style="text-align:center; font-family:var(--serif); margin-bottom: 20px;">ESTADO DE SITUACIÓN PATRIMONIAL al cierre del ejercicio${modelLabel || ''}</h3>
       <table class="esp-table" style="width:100%; border-collapse: collapse; font-size: 14px;">
         <thead>
           <tr style="border-bottom: 2px solid var(--border);">
@@ -2072,7 +2129,7 @@ function renderESP(container, saldosCuentas) {
   container.innerHTML = html;
 }
 
-function renderER(container, saldos) {
+function renderER(container, saldos, modelLabel) {
   const ventas = sumarSaldosRubro(saldos, '4', '_', 'Ingresos por ventas de bienes y prestación de servicios');
   const cmv = sumarSaldosRubro(saldos, '5', '_', 'Costo de los bienes vendidos y servicios prestados');
   const resBruto = ventas - cmv;
@@ -2112,7 +2169,7 @@ function renderER(container, saldos) {
 
   let html = `
     <div class="hoja-rayada" style="padding: 20px;">
-      <h3 style="text-align:center; font-family:var(--serif); margin-bottom: 20px;">ESTADO DE RESULTADOS por el ejercicio finalizado al cierre</h3>
+      <h3 style="text-align:center; font-family:var(--serif); margin-bottom: 20px;">ESTADO DE RESULTADOS por el ejercicio finalizado al cierre${modelLabel || ''}</h3>
       <table class="esp-table" style="width:100%; border-collapse: collapse; font-size: 14px;">
         <thead>
           <tr style="border-bottom: 2px solid var(--border);">
@@ -2193,6 +2250,7 @@ function renderCierre(el) {
              <option value="Ajuste de capital para mantenimiento de la capacidad operativa" ${row.cuentaResultado === 'Ajuste de capital para mantenimiento de la capacidad operativa' ? 'selected' : ''}>Ajuste Cap. (MCO)</option>
            </select>
          </td>
+         <td><input type="text" class="cierre-input" placeholder="Observaciones..." value="${row.observaciones || ''}" oninput="updateCierreData(${i}, 'observaciones', this.value)" style="width:100%;font-size:11px;"></td>
          <td><button class="btn-del-cierre" onclick="deleteCierreRow(${i})">×</button></td>
        </tr>
      `;
@@ -2214,7 +2272,8 @@ function renderCierre(el) {
             <th rowspan="2" class="r">MEDICIÓN SELECC.</th>
             <th rowspan="2" class="r">RES. POR TENENCIA</th>
             <th rowspan="2">CTA. RESULTADO</th>
-            <th rowspan="2"></th>
+            <th rowspan="2" style="min-width:150px">OBSERVACIONES</th>
+<th rowspan="2"></th>
           </tr>
           <tr>
             <th class="sub r">Unitario</th><th class="sub r">Cant.</th><th class="sub r">Total</th>
