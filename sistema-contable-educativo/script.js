@@ -2142,30 +2142,12 @@ function renderER(container, saldos, modelLabel) {
   const desval = sumarSaldosRubro(saldos, '5', '_', 'Pérdidas por desvalorización');
   const cambValor = sumarSaldosRubro(saldos, '5', '_', 'Cambios en el valor razonable de propiedades de inversión');
 
-  const resOperativo = resBruto - gCom - gAdm - otrosGto + otrosIng - otrosEgresos - desval - cambValor;
-  
-  let htmlResFin = `<tr class="esp-sub-row" style="padding-top:10px;"><td><em>Resultados financieros y por tenencia (incluye RECPAM)</em></td><td></td></tr>`;
-  let totalResFin = 0;
-  
-  const cuentasFin = cuentas.filter(c => c.rubro === 'Otros resultados financieros y por tenencia');
-  
-  cuentasFin.forEach(c => {
-    const saldoNeto = saldos[c.nombre.toLowerCase()] || 0;
-    if (saldoNeto !== 0) {
-      let valorMostrado = 0;
-      if (c.elemento === '5') valorMostrado = -saldoNeto; 
-      else if (c.elemento === '4') valorMostrado = -saldoNeto; 
-      
-      htmlResFin += `<tr class="esp-rubro-row"><td>${c.nombre}</td><td style="text-align:right;">${formatoParentesis(valorMostrado)}</td></tr>`;
-      totalResFin += valorMostrado;
-    }
-  });
+  // Resultados financieros y por tenencia (positivos y negativos)
+  const resFinPos = sumarSaldosRubro(saldos, '4', '_', 'Otros resultados financieros y por tenencia');
+  const resFinNeg = sumarSaldosRubro(saldos, '5', '_', 'Otros resultados financieros y por tenencia');
+  const totalResFin = resFinPos - resFinNeg;
 
-  if (totalResFin === 0) {
-    htmlResFin += `<tr class="esp-rubro-row"><td>Sin movimientos</td><td style="text-align:right;">${formatoParentesis(0)}</td></tr>`;
-  }
-  
-  const resEjercicio = resOperativo + totalResFin;
+  const resEjercicio = resBruto - gCom - gAdm - otrosGto + otrosIng - otrosEgresos - desval - cambValor + totalResFin;
 
   let html = `
     <div class="hoja-rayada" style="padding: 20px;">
@@ -2190,9 +2172,7 @@ function renderER(container, saldos, modelLabel) {
           <tr class="esp-sub-row"><td>Pérdidas por desvalorización</td><td style="text-align:right;">${formatoParentesis(-desval)}</td></tr>
           <tr class="esp-sub-row"><td>Otros egresos</td><td style="text-align:right;">${formatoParentesis(-otrosEgresos)}</td></tr>
           
-          <tr class="esp-total-row"><td><strong>RESULTADO OPERATIVO</strong></td><td style="text-align:right;"><strong>${formatoParentesis(resOperativo)}</strong></td></tr>
-          
-          ${htmlResFin}
+          <tr class="esp-sub-row" style="padding-top:10px;"><td><em>Otros resultados financieros y por tenencia (incluye RECPAM)</em></td><td style="text-align:right;">${formatoParentesis(totalResFin)}</td></tr>
           
           <tr class="esp-final-row"><td><strong>RESULTADO DEL EJERCICIO</strong></td><td style="text-align:right; border-top: 2px solid var(--text); border-bottom: 4px double var(--text);"><strong>${formatoParentesis(resEjercicio)}</strong></td></tr>
         </tbody>
