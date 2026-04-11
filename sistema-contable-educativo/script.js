@@ -281,8 +281,8 @@ function renderDashboard(el) {
       </div>
       <div style="display:flex; gap:10px; background:var(--surface-2); padding:15px; border-radius:8px; border:1px solid var(--border); flex-wrap:wrap;">
         <input type="file" id="fileImport" style="display:none" accept=".json" onchange="importarDatos(event)">
-        <button class="btn-asiento" style="background:var(--forest); border:none; color:#fff;" onclick="exportarDatos()">📥 Guardar JSON</button>
-        <button class="btn-asiento" style="background:var(--navy); border:none; color:#fff;" onclick="document.getElementById('fileImport').click()">📤 Cargar JSON</button>
+        <button class="btn-asiento" style="background:var(--forest); border:none; color:#fff;" onclick="exportarDatos()">📥 Guardar trabajo</button>
+        <button class="btn-asiento" style="background:var(--navy); border:none; color:#fff;" onclick="document.getElementById('fileImport').click()">📤 Cargar trabajo</button>
         <button class="btn-asiento" style="background:#4338ca; border:none; color:#fff;" onclick="generarReporte()">🖨️ Generar PDF</button>
         <button class="btn-asiento" style="background:var(--burgundy); border:none; color:#fff;" onclick="limpiarSistema()">🗑️ Nueva Consigna</button>
       </div>
