@@ -1383,7 +1383,7 @@ const RUBROS = {
     'No corriente': ['Proveedores de bienes y servicios', 'Préstamos y otros pasivos financieros', 'Deudas fiscales', 'Deudas laborales y previsionales', 'Deudas en especie', 'Deudas con partes relacionadas', 'Otras deudas', 'Subsidios y otras ayudas gubernamentales', 'Pasivo neto por impuesto diferido', 'Previsiones']
   },
   '3': { 'Aporte de los propietarios': ['Capital', 'Ajuste de Capital', 'Aportes Irrevocables de Capital', 'Primas de Emisión'], 'Resultados acumulados': ['Ganancias reservadas', 'Resultados diferidos', 'Resultados no asignados'] },
-  '4': { '_': ['Ingresos por ventas de bienes y prestación de servicios', 'Otros ingresos'] },
+  '4': { '_': ['Ingresos por ventas de bienes y prestación de servicios', 'Otros ingresos', 'Otros Resultados Financieros y por Tenencia'] },
   '5': { '_': ['Costo de los bienes vendidos y servicios prestados', 'Gastos de comercialización', 'Gastos de administración', 'Otros gastos operativos', 'Cambios en el valor razonable de propiedades de inversión', 'Pérdidas por desvalorización', 'Otros resultados financieros y por tenencia', 'Otros egresos'] }
 };
 
