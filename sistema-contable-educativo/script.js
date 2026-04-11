@@ -1944,7 +1944,7 @@ function getSaldosPorCuenta() {
 
 function sumarSaldosRubro(saldosCuentas, elemento, correncia, rubro) {
   let totalRubro = 0;
-  const cuentasEnRubro = cuentas.filter(c => c.elemento === elemento && c.correncia === correncia && c.rubro === rubro);
+  const cuentasEnRubro = cuentas.filter(c => c.elemento === elemento && c.correncia === correncia && c.rubro.toLowerCase() === rubro.toLowerCase());
   
   cuentasEnRubro.forEach(c => {
     const saldoNeto = saldosCuentas[c.nombre.toLowerCase()] || 0;
