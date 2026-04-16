@@ -78,6 +78,7 @@ async function verificarAprobacion(session) {
   if (navAvatar) navAvatar.textContent = userEmail.charAt(0).toUpperCase();
 
   cargarDeLaNube();
+  cargarTema();
 
   // Verificar cada 30 segundos que la sesión siga siendo válida
   if (sessionCheckInterval) clearInterval(sessionCheckInterval);
@@ -236,6 +237,7 @@ async function cargarDeLaNube() {
   }
 }
 
+
 /* ══════════════════════════════════════════
    NAVIGATION
    ══════════════════════════════════════════ */
@@ -281,8 +283,8 @@ function renderDashboard(el) {
       </div>
       <div style="display:flex; gap:10px; background:var(--surface-2); padding:15px; border-radius:8px; border:1px solid var(--border); flex-wrap:wrap;">
         <input type="file" id="fileImport" style="display:none" accept=".json" onchange="importarDatos(event)">
-        <button class="btn-asiento" style="background:var(--forest); border:none; color:#fff;" onclick="exportarDatos()">📥 Guardar trabajo</button>
-        <button class="btn-asiento" style="background:var(--navy); border:none; color:#fff;" onclick="document.getElementById('fileImport').click()">📤 Cargar trabajo</button>
+        <button class="btn-asiento" style="background:var(--forest); border:none; color:#fff;" onclick="exportarDatos()">📥 Guardar JSON</button>
+        <button class="btn-asiento" style="background:var(--navy); border:none; color:#fff;" onclick="document.getElementById('fileImport').click()">📤 Cargar JSON</button>
         <button class="btn-asiento" style="background:#4338ca; border:none; color:#fff;" onclick="generarReporte()">🖨️ Generar PDF</button>
         <button class="btn-asiento" style="background:var(--burgundy); border:none; color:#fff;" onclick="limpiarSistema()">🗑️ Nueva Consigna</button>
       </div>
@@ -1234,7 +1236,7 @@ function renderModelos(el) {
     return;
   }
 
-  const mNames = ['M1','M2','M3','M4','M5','M6'];
+ const mNames = ['M1 (CF-MN-CH)','M2 (CF-MH-CH)','M3 (CF-MN-VC)','M4 (CF-MH-VC)','M5 (CO-MN-VC)','M6 (CO-MH-VC)'];
   const mClasses = ['m1','m2','m3','m4','m5','m6'];
 
   let bodyHTML = '';
@@ -1383,7 +1385,7 @@ const RUBROS = {
     'No corriente': ['Proveedores de bienes y servicios', 'Préstamos y otros pasivos financieros', 'Deudas fiscales', 'Deudas laborales y previsionales', 'Deudas en especie', 'Deudas con partes relacionadas', 'Otras deudas', 'Subsidios y otras ayudas gubernamentales', 'Pasivo neto por impuesto diferido', 'Previsiones']
   },
   '3': { 'Aporte de los propietarios': ['Capital', 'Ajuste de Capital', 'Aportes Irrevocables de Capital', 'Primas de Emisión'], 'Resultados acumulados': ['Ganancias reservadas', 'Resultados diferidos', 'Resultados no asignados'] },
-  '4': { '_': ['Ingresos por ventas de bienes y prestación de servicios', 'Otros ingresos', 'Otros Resultados Financieros y por tenencia'] },
+  '4': { '_': ['Ingresos por ventas de bienes y prestación de servicios', 'Otros ingresos'] },
   '5': { '_': ['Costo de los bienes vendidos y servicios prestados', 'Gastos de comercialización', 'Gastos de administración', 'Otros gastos operativos', 'Cambios en el valor razonable de propiedades de inversión', 'Pérdidas por desvalorización', 'Otros resultados financieros y por tenencia', 'Otros egresos'] }
 };
 
@@ -1507,17 +1509,7 @@ function onElementoChange() {
   }
 
   document.getElementById('stepNum1').classList.add('done');
-  if (val === '3') {
-    step2.classList.add('disabled');
-    step3.classList.add('disabled');
-    step4.classList.add('disabled');
-    step5.classList.add('disabled');
-    document.getElementById('selCorrencia').value = '';
-    alert('Las cuentas del Patrimonio Neto se generan automáticamente. Miralas en el árbol de abajo.');
-    hidePreview();
-    updateBtn();
-    return;
-  }
+  
 
   if (elem.tieneCorrencia) {
     step2.classList.remove('disabled');
@@ -1754,7 +1746,10 @@ function recalcCodes() {
 }
 
 function deleteCuenta(codigo) {
-    if (codigo.startsWith('3.')) return alert('Las cuentas del Patrimonio Neto no se pueden eliminar.');
+  const cuenta = cuentas.find(c => c.codigo === codigo);
+  if (cuenta && CUENTAS_PN_FIJAS.find(pn => pn.nombre.toLowerCase() === cuenta.nombre.toLowerCase())) {
+    return alert('Esta cuenta del Patrimonio Neto viene por defecto y no se puede eliminar.');
+  }
   cuentas = cuentas.filter(c => c.codigo !== codigo);
   recalcCodes();
   renderTree();
@@ -1944,7 +1939,7 @@ function getSaldosPorCuenta() {
 
 function sumarSaldosRubro(saldosCuentas, elemento, correncia, rubro) {
   let totalRubro = 0;
-  const cuentasEnRubro = cuentas.filter(c => c.elemento === elemento && c.correncia === correncia && c.rubro.toLowerCase() === rubro.toLowerCase());
+  const cuentasEnRubro = cuentas.filter(c => c.elemento === elemento && c.correncia === correncia && c.rubro === rubro);
   
   cuentasEnRubro.forEach(c => {
     const saldoNeto = saldosCuentas[c.nombre.toLowerCase()] || 0;
@@ -1980,9 +1975,8 @@ function renderEstadosOverview(el) {
     <div class="mod-toolbar" style="margin-bottom: 10px;"><h2>Estados Contables</h2></div>
     <div class="estado-tabs" style="flex-wrap:wrap;">${tabsHTML}</div>
     <div class="estado-tabs" style="margin-top:8px;">
-      <button class="tab-btn ${currentEstadoTab === 'esp' ? 'active' : ''}" id="tab-esp" onclick="switchEstado('esp')">ESP</button>
-      <button class="tab-btn ${currentEstadoTab === 'er' ? 'active' : ''}" id="tab-er" onclick="switchEstado('er')">ER</button>
-      <button class="tab-btn ${currentEstadoTab === 'eepn' ? 'active' : ''}" id="tab-eepn" onclick="switchEstado('eepn')">EEPN</button>
+      <button class="tab-btn ${currentEstadoTab === 'esp' ? 'active' : ''}" id="tab-esp" onclick="switchEstado('esp')">Estado de Situación Patrimonial</button>
+      <button class="tab-btn ${currentEstadoTab === 'er' ? 'active' : ''}" id="tab-er" onclick="switchEstado('er')">Estado de Resultados</button>
     </div>
     <div id="estadoContentContainer"></div>
   `;
@@ -1999,7 +1993,6 @@ function switchEstado(tab) {
   currentEstadoTab = tab;
   document.getElementById('tab-esp')?.classList.toggle('active', tab === 'esp');
   document.getElementById('tab-er')?.classList.toggle('active', tab === 'er');
-  document.getElementById('tab-eepn')?.classList.toggle('active', tab === 'eepn');
   renderEstadoActual();
 }
 
@@ -2018,10 +2011,8 @@ function renderEstadoActual() {
   
   if (currentEstadoTab === 'esp') {
     renderESP(container, saldos, modelLabel);
-  } else if (currentEstadoTab === 'er') {
+  } else {
     renderER(container, saldos, modelLabel);
-  } else if (currentEstadoTab === 'eepn') {
-    renderEEPN(container, saldos, modelLabel);
   }
 }
 
@@ -2146,12 +2137,30 @@ function renderER(container, saldos, modelLabel) {
   const desval = sumarSaldosRubro(saldos, '5', '_', 'Pérdidas por desvalorización');
   const cambValor = sumarSaldosRubro(saldos, '5', '_', 'Cambios en el valor razonable de propiedades de inversión');
 
-  // Resultados financieros y por tenencia (positivos y negativos)
-  const resFinPos = sumarSaldosRubro(saldos, '4', '_', 'Otros resultados financieros y por tenencia');
-  const resFinNeg = sumarSaldosRubro(saldos, '5', '_', 'Otros resultados financieros y por tenencia');
-  const totalResFin = resFinPos - resFinNeg;
+  const resOperativo = resBruto - gCom - gAdm - otrosGto + otrosIng - otrosEgresos - desval - cambValor;
+  
+  let htmlResFin = `<tr class="esp-sub-row" style="padding-top:10px;"><td><em>Resultados financieros y por tenencia (incluye RECPAM)</em></td><td></td></tr>`;
+  let totalResFin = 0;
+  
+  const cuentasFin = cuentas.filter(c => c.rubro === 'Otros resultados financieros y por tenencia');
+  
+  cuentasFin.forEach(c => {
+    const saldoNeto = saldos[c.nombre.toLowerCase()] || 0;
+    if (saldoNeto !== 0) {
+      let valorMostrado = 0;
+      if (c.elemento === '5') valorMostrado = -saldoNeto; 
+      else if (c.elemento === '4') valorMostrado = -saldoNeto; 
+      
+      htmlResFin += `<tr class="esp-rubro-row"><td>${c.nombre}</td><td style="text-align:right;">${formatoParentesis(valorMostrado)}</td></tr>`;
+      totalResFin += valorMostrado;
+    }
+  });
 
-  const resEjercicio = resBruto - gCom - gAdm - otrosGto + otrosIng - otrosEgresos - desval - cambValor + totalResFin;
+  if (totalResFin === 0) {
+    htmlResFin += `<tr class="esp-rubro-row"><td>Sin movimientos</td><td style="text-align:right;">${formatoParentesis(0)}</td></tr>`;
+  }
+  
+  const resEjercicio = resOperativo + totalResFin;
 
   let html = `
     <div class="hoja-rayada" style="padding: 20px;">
@@ -2176,7 +2185,9 @@ function renderER(container, saldos, modelLabel) {
           <tr class="esp-sub-row"><td>Pérdidas por desvalorización</td><td style="text-align:right;">${formatoParentesis(-desval)}</td></tr>
           <tr class="esp-sub-row"><td>Otros egresos</td><td style="text-align:right;">${formatoParentesis(-otrosEgresos)}</td></tr>
           
-          <tr class="esp-sub-row" style="padding-top:10px;"><td><em>Otros resultados financieros y por tenencia (incluye RECPAM)</em></td><td style="text-align:right;">${formatoParentesis(totalResFin)}</td></tr>
+          <tr class="esp-total-row"><td><strong>RESULTADO OPERATIVO</strong></td><td style="text-align:right;"><strong>${formatoParentesis(resOperativo)}</strong></td></tr>
+          
+          ${htmlResFin}
           
           <tr class="esp-final-row"><td><strong>RESULTADO DEL EJERCICIO</strong></td><td style="text-align:right; border-top: 2px solid var(--text); border-bottom: 4px double var(--text);"><strong>${formatoParentesis(resEjercicio)}</strong></td></tr>
         </tbody>
@@ -2184,176 +2195,6 @@ function renderER(container, saldos, modelLabel) {
     </div>
   `;
   container.innerHTML = html;
-}
-
-function renderEEPN(container, saldosCuentas, modelLabel) {
-  // Obtener saldos de cada cuenta del PN
-  const get = (nombre) => {
-    const key = nombre.toLowerCase();
-    const saldo = saldosCuentas[key] || 0;
-    return saldo * -1; // PN tiene saldo acreedor, lo mostramos positivo
-  };
-
-  const capital = get('Capital');
-  const ajusteCapital = get('Ajuste de Capital');
-  const aportes = get('Aportes Irrevocables de Capital');
-  const primas = get('Primas de Emisión');
-  const totalAportes = capital + ajusteCapital + aportes + primas;
-
-  const resLegal = get('Reserva Legal');
-  const resEstatutaria = get('Reserva Estatutaria');
-  const resFacultativa = get('Reserva Facultativa');
-  const otrasReservas = resEstatutaria + resFacultativa;
-  const resNoAsignados = get('A. R. E. A.') + get('Resultados Acumulados de Ejercicios Anteriores');
-  const resDiferidos = get('Resultados Diferidos');
-
-  // Resultado del ejercicio (de los rubros 4 y 5)
-  let totalRPos = 0;
-  RUBROS['4']['_'].forEach(rName => totalRPos += sumarSaldosRubro(saldosCuentas, '4', '_', rName));
-  let totalRNeg = 0;
-  RUBROS['5']['_'].forEach(rName => totalRNeg += sumarSaldosRubro(saldosCuentas, '5', '_', rName));
-  const resultadoEjercicio = totalRPos - totalRNeg;
-
-  const totalResAcum = resLegal + otrasReservas + resNoAsignados + resDiferidos + resultadoEjercicio;
-  const totalActual = totalAportes + totalResAcum;
-
-  const fmt = (v) => v !== 0 ? formatMoney(v) : '';
-  const fmtP = (v) => v !== 0 ? formatoParentesis(v) : '';
-
-  const thStyle = 'padding:8px 6px; font-size:11px; font-weight:600; text-align:center; border:1px solid var(--border); background:var(--navy); color:#e0ddd6;';
-  const tdStyle = 'padding:6px 8px; font-size:12px; text-align:right; border:1px solid var(--border-light); font-family:var(--mono);';
-  const tdLabel = 'padding:8px 10px; font-size:12px; text-align:left; border:1px solid var(--border-light); font-family:var(--serif);';
-  const tdBold = 'padding:8px 10px; font-size:12px; text-align:left; border:1px solid var(--border-light); font-family:var(--serif); font-weight:700; background:rgba(27,42,74,0.03);';
-  const tdBoldR = 'padding:6px 8px; font-size:12px; text-align:right; border:1px solid var(--border-light); font-family:var(--mono); font-weight:700; background:rgba(27,42,74,0.03);';
-  const tdRef = 'padding:6px 8px; font-size:11px; text-align:center; border:1px solid var(--border-light); color:var(--text-muted);';
-
-  const emptyRow = `<td style="${tdRef}"></td><td style="${tdLabel}"></td><td style="${tdStyle}"></td><td style="${tdStyle}"></td><td style="${tdStyle}"></td><td style="${tdStyle}"></td><td style="${tdStyle}"></td><td style="${tdStyle}"></td><td style="${tdStyle}"></td><td style="${tdStyle}"></td><td style="${tdStyle}"></td><td style="${tdStyle}"></td><td style="${tdStyle}"></td>`;
-
-  container.innerHTML = `
-    <div class="hoja-rayada" style="padding: 20px; overflow-x:auto;">
-      <h3 style="text-align:center; font-family:var(--serif); margin-bottom:5px;">ESTADO DE EVOLUCIÓN DEL PATRIMONIO NETO${modelLabel || ''}</h3>
-      <p style="text-align:center; font-size:12px; color:var(--text-muted); margin-bottom:5px;">Por el ejercicio finalizado al cierre</p>
-      <p style="text-align:center; font-size:11px; color:var(--text-muted); margin-bottom:20px;">Cifras expresadas en pesos</p>
-      
-      <table style="width:100%; border-collapse:collapse; min-width:1100px; font-size:12px;">
-        <thead>
-          <tr>
-            <th rowspan="3" style="${thStyle} width:30px;">Ref.</th>
-            <th rowspan="3" style="${thStyle} width:180px; text-align:left;">Rubros</th>
-            <th colspan="5" style="${thStyle}">Aportes de los propietarios</th>
-            <th colspan="4" style="${thStyle}">Resultados acumulados</th>
-            <th colspan="2" style="${thStyle}">Totales</th>
-          </tr>
-          <tr>
-            <th rowspan="2" style="${thStyle}">Capital suscripto</th>
-            <th rowspan="2" style="${thStyle}">Ajuste del capital</th>
-            <th rowspan="2" style="${thStyle}">Aportes irrevocables</th>
-            <th rowspan="2" style="${thStyle}">Primas de emisión</th>
-            <th rowspan="2" style="${thStyle}">Total</th>
-            <th colspan="2" style="${thStyle}">Ganancias reservadas</th>
-            <th rowspan="2" style="${thStyle}">Resultados no asignados</th>
-            <th rowspan="2" style="${thStyle}">Resultados diferidos</th>
-            <th rowspan="2" style="${thStyle}">Actual</th>
-            <th rowspan="2" style="${thStyle}">Comparativo</th>
-          </tr>
-          <tr>
-            <th style="${thStyle}">Reserva legal</th>
-            <th style="${thStyle}">Otras reservas</th>
-          </tr>
-        </thead>
-        <tbody>
-          <!-- Saldos al inicio del ejercicio -->
-          <tr>
-            <td style="${tdRef}">(2)</td>
-            <td style="${tdBold}">Saldos al inicio del ejercicio</td>
-            <td style="${tdStyle}"></td><td style="${tdStyle}"></td><td style="${tdStyle}"></td><td style="${tdStyle}"></td><td style="${tdStyle}"></td>
-            <td style="${tdStyle}"></td><td style="${tdStyle}"></td><td style="${tdStyle}"></td><td style="${tdStyle}"></td>
-            <td style="${tdStyle}"></td><td style="${tdStyle}"></td>
-          </tr>
-          <!-- Modificación de saldos -->
-          <tr>
-            <td style="${tdRef}"></td>
-            <td style="${tdLabel} padding-left:20px;">Modificación de saldos al inicio del ejercicio (Nota 1.6)</td>
-            <td style="${tdStyle}"></td><td style="${tdStyle}"></td><td style="${tdStyle}"></td><td style="${tdStyle}"></td><td style="${tdStyle}"></td>
-            <td style="${tdStyle}"></td><td style="${tdStyle}"></td><td style="${tdStyle}"></td><td style="${tdStyle}"></td>
-            <td style="${tdStyle}"></td><td style="${tdStyle}"></td>
-          </tr>
-          <!-- Saldos al inicio modificados -->
-          <tr>
-            <td style="${tdRef}">(2)</td>
-            <td style="${tdBold}">Saldos al inicio del ejercicio modificados</td>
-            <td style="${tdBoldR}"></td><td style="${tdBoldR}"></td><td style="${tdBoldR}"></td><td style="${tdBoldR}"></td><td style="${tdBoldR}"></td>
-            <td style="${tdBoldR}"></td><td style="${tdBoldR}"></td><td style="${tdBoldR}"></td><td style="${tdBoldR}"></td>
-            <td style="${tdBoldR}"></td><td style="${tdBoldR}"></td>
-          </tr>
-          <!-- Suscripción de capital social -->
-          <tr>
-            <td style="${tdRef}"></td>
-            <td style="${tdLabel} padding-left:20px;">Suscripción de capital social (*)</td>
-            <td style="${tdStyle}">${fmt(capital)}</td><td style="${tdStyle}">${fmt(ajusteCapital)}</td><td style="${tdStyle}">${fmt(aportes)}</td><td style="${tdStyle}">${fmt(primas)}</td><td style="${tdStyle}">${fmt(totalAportes)}</td>
-            <td style="${tdStyle}"></td><td style="${tdStyle}"></td><td style="${tdStyle}"></td><td style="${tdStyle}"></td>
-            <td style="${tdStyle}">${fmt(totalAportes)}</td><td style="${tdStyle}"></td>
-          </tr>
-          <!-- Distribución de resultados no asignados -->
-          <tr>
-            <td style="${tdRef}"></td>
-            <td style="${tdLabel} padding-left:20px;">Distribución de resultados no asignados (**)</td>
-            <td style="${tdStyle}"></td><td style="${tdStyle}"></td><td style="${tdStyle}"></td><td style="${tdStyle}"></td><td style="${tdStyle}"></td>
-            <td style="${tdStyle}"></td><td style="${tdStyle}"></td><td style="${tdStyle}"></td><td style="${tdStyle}"></td>
-            <td style="${tdStyle}"></td><td style="${tdStyle}"></td>
-          </tr>
-          <!-- a Reserva legal / Otras reservas -->
-          <tr>
-            <td style="${tdRef}"></td>
-            <td style="${tdLabel} padding-left:36px;">a Reserva legal / Otras reservas</td>
-            <td style="${tdStyle}"></td><td style="${tdStyle}"></td><td style="${tdStyle}"></td><td style="${tdStyle}"></td><td style="${tdStyle}"></td>
-            <td style="${tdStyle}">${fmt(resLegal)}</td><td style="${tdStyle}">${fmt(otrasReservas)}</td><td style="${tdStyle}"></td><td style="${tdStyle}"></td>
-            <td style="${tdStyle}">${fmt(resLegal + otrasReservas)}</td><td style="${tdStyle}"></td>
-          </tr>
-          <!-- a Dividendos en efectivo -->
-          <tr>
-            <td style="${tdRef}"></td>
-            <td style="${tdLabel} padding-left:36px;">a Dividendos en efectivo</td>
-            <td style="${tdStyle}"></td><td style="${tdStyle}"></td><td style="${tdStyle}"></td><td style="${tdStyle}"></td><td style="${tdStyle}"></td>
-            <td style="${tdStyle}"></td><td style="${tdStyle}"></td><td style="${tdStyle}"></td><td style="${tdStyle}"></td>
-            <td style="${tdStyle}"></td><td style="${tdStyle}"></td>
-          </tr>
-          <!-- a Dividendos en acciones -->
-          <tr>
-            <td style="${tdRef}"></td>
-            <td style="${tdLabel} padding-left:36px;">a Dividendos en acciones</td>
-            <td style="${tdStyle}"></td><td style="${tdStyle}"></td><td style="${tdStyle}"></td><td style="${tdStyle}"></td><td style="${tdStyle}"></td>
-            <td style="${tdStyle}"></td><td style="${tdStyle}"></td><td style="${tdStyle}"></td><td style="${tdStyle}"></td>
-            <td style="${tdStyle}"></td><td style="${tdStyle}"></td>
-          </tr>
-          <!-- Ganancia (Pérdida) del ejercicio -->
-          <tr>
-            <td style="${tdRef}"></td>
-            <td style="${tdLabel} padding-left:20px;">Ganancia (Pérdida) del ejercicio</td>
-            <td style="${tdStyle}"></td><td style="${tdStyle}"></td><td style="${tdStyle}"></td><td style="${tdStyle}"></td><td style="${tdStyle}"></td>
-            <td style="${tdStyle}"></td><td style="${tdStyle}"></td><td style="${tdStyle}">${fmtP(resultadoEjercicio)}</td><td style="${tdStyle}"></td>
-            <td style="${tdStyle}">${fmtP(resultadoEjercicio)}</td><td style="${tdStyle}"></td>
-          </tr>
-          <!-- Saldos al cierre del ejercicio -->
-          <tr>
-            <td style="${tdRef}">(4)</td>
-            <td style="${tdBold}">Saldos al cierre del ejercicio</td>
-            <td style="${tdBoldR}">${fmt(capital)}</td>
-            <td style="${tdBoldR}">${fmt(ajusteCapital)}</td>
-            <td style="${tdBoldR}">${fmt(aportes)}</td>
-            <td style="${tdBoldR}">${fmt(primas)}</td>
-            <td style="${tdBoldR}">${fmt(totalAportes)}</td>
-            <td style="${tdBoldR}">${fmt(resLegal)}</td>
-            <td style="${tdBoldR}">${fmt(otrasReservas)}</td>
-            <td style="${tdBoldR}">${fmtP(resNoAsignados + resultadoEjercicio)}</td>
-            <td style="${tdBoldR}">${fmt(resDiferidos)}</td>
-            <td style="${tdBoldR}">${fmtP(totalActual)}</td>
-            <td style="${tdBoldR}"></td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
-  `;
 }
 
 /* ══════════════════════════════════════════
@@ -2379,21 +2220,22 @@ function renderCierre(el) {
      const colorRes = resTenencia < 0 ? 'var(--burgundy)' : 'var(--forest)';
 
      tbodyHTML += `
-       <tr data-index="${i}">
-         <td>
-           <div class="autocomplete-wrapper">
-             <input type="text" class="line-cuenta cierre-input" placeholder="Buscar..." value="${row.cuenta}" oninput="showAutocomplete(this); updateCierreData(${i}, 'cuenta', this.value)" onfocus="showAutocomplete(this)">
+         <tr data-index="${i}" draggable="true" ondragstart="dragStartCierre(event, ${i})" ondragover="dragOverCierre(event)" ondrop="dropCierre(event, ${i})" ondragend="dragEndCierre(event)">
+           <td style="text-align:center; cursor:grab; color:var(--text-muted); user-select:none;" title="Arrastrá para reordenar">⋮⋮</td>
+           <td>
+             <div class="autocomplete-wrapper">
+             <input type="text" class="line-cuenta cierre-input" placeholder="Buscar..." value="${row.cuenta}" oninput="showAutocomplete(this); updateCierreData(${i}, 'cuenta', this.value)" onfocus="showAutocomplete(this)" style="width:100%;">
              <div class="autocomplete-list"></div>
            </div>
          </td>
          <td><input type="number" step="0.01" class="cierre-input r" value="${row.saldoCierre}" oninput="updateCierreData(${i}, 'saldoCierre', this.value)"></td>
          
-         <td style="background:rgba(27,42,74,0.02)"><input type="number" step="0.01" class="cierre-input r" placeholder="Unit." value="${row.crUnitario}" oninput="updateCierreData(${i}, 'crUnitario', this.value)"></td>
-         <td style="background:rgba(27,42,74,0.02)"><input type="number" step="1" class="cierre-input r" placeholder="Cant." value="${row.cantCR}" oninput="updateCierreData(${i}, 'cantCR', this.value)"></td>
+         <td style="background:rgba(27,42,74,0.02)"><input type="number" step="0.01" class="cierre-input r" placeholder="Unit." value="${row.crUnitario}" oninput="updateCierreData(${i}, 'crUnitario', this.value)" style="width:90px;"></td>
+         <td style="background:rgba(27,42,74,0.02)"><input type="number" step="1" class="cierre-input r" placeholder="Cant." value="${row.cantCR}" oninput="updateCierreData(${i}, 'cantCR', this.value)" style="width:70px;"></td>
          <td style="background:rgba(27,42,74,0.05); font-weight:600; text-align:right; padding-right:10px;">${row.crTotal ? formatMoney(row.crTotal) : '0.00'}</td>
 
-         <td style="background:rgba(180,83,9,0.02)"><input type="number" step="0.01" class="cierre-input r" placeholder="Unit." value="${row.vlUnitario}" oninput="updateCierreData(${i}, 'vlUnitario', this.value)"></td>
-         <td style="background:rgba(180,83,9,0.02)"><input type="number" step="1" class="cierre-input r" placeholder="Cant." value="${row.cantVL}" oninput="updateCierreData(${i}, 'cantVL', this.value)"></td>
+         <td style="background:rgba(180,83,9,0.02)"><input type="number" step="0.01" class="cierre-input r" placeholder="Unit." value="${row.vlUnitario}" oninput="updateCierreData(${i}, 'vlUnitario', this.value)" style="width:90px;"></td>
+         <td style="background:rgba(180,83,9,0.02)"><input type="number" step="1" class="cierre-input r" placeholder="Cant." value="${row.cantVL}" oninput="updateCierreData(${i}, 'cantVL', this.value)" style="width:70px;"></td>
          <td style="background:rgba(180,83,9,0.05); font-weight:600; text-align:right; padding-right:10px;">${row.vlTotal ? formatMoney(row.vlTotal) : '0.00'}</td>
 
          <td><input type="number" step="0.01" class="cierre-input r" placeholder="Medición" value="${row.medicion}" oninput="updateCierreData(${i}, 'medicion', this.value)"></td>
@@ -2419,7 +2261,8 @@ function renderCierre(el) {
       <table class="ajuste-table cierre-table" style="min-width: 1300px; font-size:12px;">
         <thead>
           <tr>
-            <th rowspan="2" style="width:180px;">CUENTA</th>
+            <th rowspan="2" style="width:30px;"></th>
+           <th rowspan="2" style="width:220px; min-width:220px;">CUENTA</th>
             <th rowspan="2" class="r">SALDO AL CIERRE</th>
             <th colspan="3" style="background:var(--navy); color:#fff; text-align:center;">COSTO DE REPOSICIÓN</th>
             <th colspan="3" style="background:#b45309; color:#fff; text-align:center;">VALOR LÍMITE</th>
@@ -2463,14 +2306,14 @@ function updateCierreData(index, field, value) {
   // 4. ACTUALIZACIÓN DINÁMICA: Buscamos la fila en el DOM para actualizar solo los totales
   const row = document.querySelector(`.cierre-table tbody tr[data-index="${index}"]`);
   if (row) {
-    // Actualizamos el total de Reposición (celda 4)
-    row.cells[4].textContent = cierreData[index].crTotal !== 0 ? formatMoney(cierreData[index].crTotal) : '0.00';
+    // Actualizamos el total de Reposición (celda 5, antes era 4)
+    row.cells[5].textContent = cierreData[index].crTotal !== 0 ? formatMoney(cierreData[index].crTotal) : '0.00';
     
-    // Actualizamos el total de Valor Límite (celda 7)
-    row.cells[7].textContent = cierreData[index].vlTotal !== 0 ? formatMoney(cierreData[index].vlTotal) : '0.00';
+    // Actualizamos el total de Valor Límite (celda 8, antes era 7)
+    row.cells[8].textContent = cierreData[index].vlTotal !== 0 ? formatMoney(cierreData[index].vlTotal) : '0.00';
     
-    // Actualizamos el Resultado por Tenencia (celda 9)
-    const tdRes = row.cells[9];
+    // Actualizamos el Resultado por Tenencia (celda 10, antes era 9)
+    const tdRes = row.cells[10];
     tdRes.textContent = resTenencia !== 0 ? formatMoney(resTenencia) : '';
     tdRes.style.color = resTenencia < 0 ? 'var(--burgundy)' : 'var(--forest)';
   }
@@ -2486,6 +2329,39 @@ function deleteCierreRow(index) {
   cierreData.splice(index, 1);
   saveData();
   renderCierre(document.getElementById('contentArea'));
+}
+
+let dragIndexCierre = null;
+
+function dragStartCierre(e, idx) {
+  dragIndexCierre = idx;
+  e.dataTransfer.effectAllowed = 'move';
+  e.currentTarget.style.opacity = '0.4';
+}
+
+function dragOverCierre(e) {
+  e.preventDefault();
+  e.dataTransfer.dropEffect = 'move';
+  return false;
+}
+
+function dropCierre(e, idx) {
+  e.preventDefault();
+  e.stopPropagation();
+  if (dragIndexCierre === null || dragIndexCierre === idx) return false;
+  
+  const movedRow = cierreData[dragIndexCierre];
+  cierreData.splice(dragIndexCierre, 1);
+  cierreData.splice(idx, 0, movedRow);
+  
+  saveData();
+  renderCierre(document.getElementById('contentArea'));
+  return false;
+}
+
+function dragEndCierre(e) {
+  e.currentTarget.style.opacity = '1';
+  dragIndexCierre = null;
 }
 ensurePNCuentas();
 
@@ -2827,4 +2703,24 @@ function mpGuardar() {
   }
 
   alert('Cuenta "' + nombre + '" creada con éxito.');
+}
+function toggleTheme() {
+  document.body.classList.toggle('dark-mode');
+  const isDark = document.body.classList.contains('dark-mode');
+  const btn = document.getElementById('themeToggle');
+  if (btn) btn.textContent = isDark ? '☀️' : '🌙';
+  
+  if (currentUser) {
+    db.from('perfiles').update({ tema: isDark ? 'dark' : 'light' }).eq('id', currentUser.id);
+  }
+}
+
+async function cargarTema() {
+  if (!currentUser) return;
+  const { data } = await db.from('perfiles').select('tema').eq('id', currentUser.id).single();
+  if (data && data.tema === 'dark') {
+    document.body.classList.add('dark-mode');
+    const btn = document.getElementById('themeToggle');
+    if (btn) btn.textContent = '☀️';
+  }
 }
