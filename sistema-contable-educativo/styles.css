@@ -21,6 +21,141 @@
   --sans: 'Source Sans 3', sans-serif;
   --mono: 'JetBrains Mono', monospace;
 }
+body.dark-mode {
+  --navy: #5b9dd9;
+  --navy-light: #7db0e0;
+  --burgundy: #d97757;
+  --forest: #5eb88f;
+  --cream: #0a0a0f;
+  --surface: #12121a;
+  --surface-2: #1a1a24;
+  --surface-3: #242430;
+  --text: #e8e8ec;
+  --text-secondary: #b8b8c4;
+  --text-muted: #6a6a78;
+  --border: rgba(91, 157, 217, 0.15);
+  --border-light: rgba(91, 157, 217, 0.08);
+}
+
+body.dark-mode {
+  background: var(--cream);
+  color: var(--text);
+}
+
+body.dark-mode .module-card,
+body.dark-mode .hoja-rayada,
+body.dark-mode .mayor-card,
+body.dark-mode .plan-creator,
+body.dark-mode .plan-tree,
+body.dark-mode .stock-card,
+body.dark-mode .modelos-wrap,
+body.dark-mode .coef-panel,
+body.dark-mode .directo-card,
+body.dark-mode .cierre-config {
+  background: var(--surface);
+  border-color: var(--border);
+}
+
+body.dark-mode .sidebar {
+  background: #080810;
+  border-right: 1px solid var(--border);
+}
+
+body.dark-mode .topbar {
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+}
+
+body.dark-mode input,
+body.dark-mode select,
+body.dark-mode textarea {
+  background: var(--surface-2) !important;
+  color: var(--text) !important;
+  border-color: var(--border) !important;
+}
+
+body.dark-mode .card-title,
+body.dark-mode h1, body.dark-mode h2, body.dark-mode h3 {
+  color: var(--navy);
+}
+
+body.dark-mode .card-desc,
+body.dark-mode p {
+  color: var(--text-secondary);
+}
+
+body.dark-mode .nav-item {
+  color: var(--text-secondary);
+}
+
+body.dark-mode .nav-item.active,
+body.dark-mode .nav-item:hover {
+  background: var(--surface-2);
+  color: var(--navy);
+}
+
+body.dark-mode .hoja-row {
+  border-color: var(--border-light);
+}
+
+body.dark-mode .hoja-row.row-asiento-num {
+  background: var(--surface-2);
+}
+
+body.dark-mode .hoja-header {
+  background: var(--surface-2);
+  color: var(--navy);
+}
+
+body.dark-mode table thead th {
+  background: var(--surface-2) !important;
+  color: var(--navy) !important;
+}
+
+body.dark-mode table tbody td {
+  border-color: var(--border-light);
+  color: var(--text);
+}
+
+body.dark-mode .autocomplete-list {
+  background: var(--surface-2);
+  border-color: var(--border);
+}
+
+body.dark-mode .autocomplete-item {
+  color: var(--text);
+}
+
+body.dark-mode .autocomplete-item:hover {
+  background: var(--surface-3);
+}
+
+body.dark-mode .modal {
+  background: var(--surface);
+  border-color: var(--border);
+}
+
+.theme-toggle {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: var(--navy);
+  color: #fff;
+  border: none;
+  cursor: pointer;
+  font-size: 18px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  z-index: 500;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.2s;
+}
+
+.theme-toggle:hover { transform: scale(1.1); }
 
 body { font-family: var(--sans); background: var(--bg); color: var(--text); min-height: 100vh; }
 .app-layout { display: flex; min-height: 100vh; }
@@ -939,4 +1074,20 @@ input[type="number"].locked-input:focus {
 }
 .app-hidden {
   display: none !important;
+}
+.modelos-table thead tr:first-child th {
+  position: sticky;
+  top: 0;
+  z-index: 11;
+}
+
+.modelos-table thead tr:nth-child(2) th {
+  position: sticky;
+  top: 28px;
+  z-index: 10;
+}
+
+.modelos-wrap {
+  max-height: calc(100vh - 180px);
+  overflow: auto;
 }
