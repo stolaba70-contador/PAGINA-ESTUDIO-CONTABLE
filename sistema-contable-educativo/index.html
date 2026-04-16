@@ -196,6 +196,28 @@
   </div>
 </div>
 
+<!-- MODAL MINI PLAN DE CUENTAS -->
+<div class="modal-overlay" id="modalMiniPlan" style="z-index:600;">
+  <div class="modal" style="width:500px;">
+    <div class="modal-header">
+      <h3>Crear cuenta rápida</h3>
+      <button class="modal-close" onclick="closeMiniPlan()"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group" style="margin-bottom:12px"><label>Elemento</label><select id="mpElemento" onchange="mpOnElemento()"><option value="">— Seleccionar —</option><option value="1">1 — ACTIVO</option><option value="2">2 — PASIVO</option><option value="3">3 — PATRIMONIO NETO</option><option value="4">4 — RESULTADOS POSITIVOS</option><option value="5">5 — RESULTADOS NEGATIVOS</option></select></div>
+      <div class="form-group" style="margin-bottom:12px"><label>Clasificación</label><select id="mpCorrencia" onchange="mpOnCorrencia()" disabled></select></div>
+      <div class="form-group" style="margin-bottom:12px"><label>Rubro</label><select id="mpRubro" onchange="mpOnRubro()" disabled></select></div>
+      <div class="form-group" style="margin-bottom:12px"><label>Nombre de la cuenta</label><input type="text" id="mpNombre" placeholder="Ej: Banco Nación cta. cte." disabled></div>
+      <div class="form-group" style="margin-bottom:12px"><label>Cualidad (Inflación)</label><select id="mpMonetaria" disabled><option value="">— Seleccionar —</option><option value="monetaria">Monetaria</option><option value="no_monetaria">No monetaria</option></select></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-cancel" onclick="closeMiniPlan()">Cancelar</button>
+      <button class="btn-submit" onclick="mpGuardar()">Crear cuenta</button>
+    </div>
+  </div>
+</div>
+
 <script src="script.js"></script>
+<button class="theme-toggle" onclick="toggleTheme()" title="Cambiar tema" id="themeToggle">🌙</button>
 </body>
 </html>
