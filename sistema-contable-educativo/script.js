@@ -1385,7 +1385,7 @@ const RUBROS = {
     'No corriente': ['Proveedores de bienes y servicios', 'Préstamos y otros pasivos financieros', 'Deudas fiscales', 'Deudas laborales y previsionales', 'Deudas en especie', 'Deudas con partes relacionadas', 'Otras deudas', 'Subsidios y otras ayudas gubernamentales', 'Pasivo neto por impuesto diferido', 'Previsiones']
   },
   '3': { 'Aporte de los propietarios': ['Capital', 'Ajuste de Capital', 'Aportes Irrevocables de Capital', 'Primas de Emisión'], 'Resultados acumulados': ['Ganancias reservadas', 'Resultados diferidos', 'Resultados no asignados'] },
-  '4': { '_': ['Ingresos por ventas de bienes y prestación de servicios', 'Otros ingresos'] },
+  '4': { '_': ['Ingresos por ventas de bienes y prestación de servicios', 'Otros ingresos', 'Otros resultados financieros y por tenencia'] },
   '5': { '_': ['Costo de los bienes vendidos y servicios prestados', 'Gastos de comercialización', 'Gastos de administración', 'Otros gastos operativos', 'Cambios en el valor razonable de propiedades de inversión', 'Pérdidas por desvalorización', 'Otros resultados financieros y por tenencia', 'Otros egresos'] }
 };
 
@@ -1975,8 +1975,9 @@ function renderEstadosOverview(el) {
     <div class="mod-toolbar" style="margin-bottom: 10px;"><h2>Estados Contables</h2></div>
     <div class="estado-tabs" style="flex-wrap:wrap;">${tabsHTML}</div>
     <div class="estado-tabs" style="margin-top:8px;">
-      <button class="tab-btn ${currentEstadoTab === 'esp' ? 'active' : ''}" id="tab-esp" onclick="switchEstado('esp')">Estado de Situación Patrimonial</button>
-      <button class="tab-btn ${currentEstadoTab === 'er' ? 'active' : ''}" id="tab-er" onclick="switchEstado('er')">Estado de Resultados</button>
+      <button class="tab-btn ${currentEstadoTab === 'esp' ? 'active' : ''}" id="tab-esp" onclick="switchEstado('esp')">ESP</button>
+      <button class="tab-btn ${currentEstadoTab === 'er' ? 'active' : ''}" id="tab-er" onclick="switchEstado('er')">ER</button>
+      <button class="tab-btn ${currentEstadoTab === 'eepn' ? 'active' : ''}" id="tab-eepn" onclick="switchEstado('eepn')">EEPN</button>
     </div>
     <div id="estadoContentContainer"></div>
   `;
@@ -1993,6 +1994,7 @@ function switchEstado(tab) {
   currentEstadoTab = tab;
   document.getElementById('tab-esp')?.classList.toggle('active', tab === 'esp');
   document.getElementById('tab-er')?.classList.toggle('active', tab === 'er');
+  document.getElementById('tab-eepn')?.classList.toggle('active', tab === 'eepn');
   renderEstadoActual();
 }
 
@@ -2011,8 +2013,10 @@ function renderEstadoActual() {
   
   if (currentEstadoTab === 'esp') {
     renderESP(container, saldos, modelLabel);
-  } else {
+  } else if (currentEstadoTab === 'er') {
     renderER(container, saldos, modelLabel);
+  } else if (currentEstadoTab === 'eepn') {
+    renderEEPN(container, saldos, modelLabel);
   }
 }
 
@@ -2137,30 +2141,12 @@ function renderER(container, saldos, modelLabel) {
   const desval = sumarSaldosRubro(saldos, '5', '_', 'Pérdidas por desvalorización');
   const cambValor = sumarSaldosRubro(saldos, '5', '_', 'Cambios en el valor razonable de propiedades de inversión');
 
-  const resOperativo = resBruto - gCom - gAdm - otrosGto + otrosIng - otrosEgresos - desval - cambValor;
-  
-  let htmlResFin = `<tr class="esp-sub-row" style="padding-top:10px;"><td><em>Resultados financieros y por tenencia (incluye RECPAM)</em></td><td></td></tr>`;
-  let totalResFin = 0;
-  
-  const cuentasFin = cuentas.filter(c => c.rubro === 'Otros resultados financieros y por tenencia');
-  
-  cuentasFin.forEach(c => {
-    const saldoNeto = saldos[c.nombre.toLowerCase()] || 0;
-    if (saldoNeto !== 0) {
-      let valorMostrado = 0;
-      if (c.elemento === '5') valorMostrado = -saldoNeto; 
-      else if (c.elemento === '4') valorMostrado = -saldoNeto; 
-      
-      htmlResFin += `<tr class="esp-rubro-row"><td>${c.nombre}</td><td style="text-align:right;">${formatoParentesis(valorMostrado)}</td></tr>`;
-      totalResFin += valorMostrado;
-    }
-  });
+  // Resultados financieros y por tenencia (positivos y negativos)
+  const resFinPos = sumarSaldosRubro(saldos, '4', '_', 'Otros resultados financieros y por tenencia');
+  const resFinNeg = sumarSaldosRubro(saldos, '5', '_', 'Otros resultados financieros y por tenencia');
+  const totalResFin = resFinPos - resFinNeg;
 
-  if (totalResFin === 0) {
-    htmlResFin += `<tr class="esp-rubro-row"><td>Sin movimientos</td><td style="text-align:right;">${formatoParentesis(0)}</td></tr>`;
-  }
-  
-  const resEjercicio = resOperativo + totalResFin;
+  const resEjercicio = resBruto - gCom - gAdm - otrosGto + otrosIng - otrosEgresos - desval - cambValor + totalResFin;
 
   let html = `
     <div class="hoja-rayada" style="padding: 20px;">
@@ -2185,9 +2171,7 @@ function renderER(container, saldos, modelLabel) {
           <tr class="esp-sub-row"><td>Pérdidas por desvalorización</td><td style="text-align:right;">${formatoParentesis(-desval)}</td></tr>
           <tr class="esp-sub-row"><td>Otros egresos</td><td style="text-align:right;">${formatoParentesis(-otrosEgresos)}</td></tr>
           
-          <tr class="esp-total-row"><td><strong>RESULTADO OPERATIVO</strong></td><td style="text-align:right;"><strong>${formatoParentesis(resOperativo)}</strong></td></tr>
-          
-          ${htmlResFin}
+          <tr class="esp-sub-row" style="padding-top:10px;"><td><em>Otros resultados financieros y por tenencia (incluye RECPAM)</em></td><td style="text-align:right;">${formatoParentesis(totalResFin)}</td></tr>
           
           <tr class="esp-final-row"><td><strong>RESULTADO DEL EJERCICIO</strong></td><td style="text-align:right; border-top: 2px solid var(--text); border-bottom: 4px double var(--text);"><strong>${formatoParentesis(resEjercicio)}</strong></td></tr>
         </tbody>
@@ -2195,6 +2179,162 @@ function renderER(container, saldos, modelLabel) {
     </div>
   `;
   container.innerHTML = html;
+}
+
+function renderEEPN(container, saldosCuentas, modelLabel) {
+  const get = (nombre) => {
+    const key = nombre.toLowerCase();
+    const saldo = saldosCuentas[key] || 0;
+    return saldo * -1;
+  };
+
+  const capital = get('Capital');
+  const ajusteCapital = get('Ajuste de Capital');
+  const aportes = get('Aportes Irrevocables de Capital');
+  const primas = get('Primas de Emisión');
+  const totalAportes = capital + ajusteCapital + aportes + primas;
+
+  const resLegal = get('Reserva Legal');
+  const resEstatutaria = get('Reserva Estatutaria');
+  const resFacultativa = get('Reserva Facultativa');
+  const otrasReservas = resEstatutaria + resFacultativa;
+  const resNoAsignados = get('A. R. E. A.') + get('Resultados Acumulados de Ejercicios Anteriores');
+  const resDiferidos = get('Resultados Diferidos');
+
+  let totalRPos = 0;
+  RUBROS['4']['_'].forEach(rName => totalRPos += sumarSaldosRubro(saldosCuentas, '4', '_', rName));
+  let totalRNeg = 0;
+  RUBROS['5']['_'].forEach(rName => totalRNeg += sumarSaldosRubro(saldosCuentas, '5', '_', rName));
+  const resultadoEjercicio = totalRPos - totalRNeg;
+
+  const totalResAcum = resLegal + otrasReservas + resNoAsignados + resDiferidos + resultadoEjercicio;
+  const totalActual = totalAportes + totalResAcum;
+
+  const fmt = (v) => v !== 0 ? formatMoney(v) : '';
+  const fmtP = (v) => v !== 0 ? formatoParentesis(v) : '';
+
+  const thStyle = 'padding:8px 6px; font-size:11px; font-weight:600; text-align:center; border:1px solid var(--border); background:var(--navy); color:#e0ddd6;';
+  const tdStyle = 'padding:6px 8px; font-size:12px; text-align:right; border:1px solid var(--border-light); font-family:var(--mono);';
+  const tdLabel = 'padding:8px 10px; font-size:12px; text-align:left; border:1px solid var(--border-light); font-family:var(--serif);';
+  const tdBold = 'padding:8px 10px; font-size:12px; text-align:left; border:1px solid var(--border-light); font-family:var(--serif); font-weight:700; background:rgba(27,42,74,0.03);';
+  const tdBoldR = 'padding:6px 8px; font-size:12px; text-align:right; border:1px solid var(--border-light); font-family:var(--mono); font-weight:700; background:rgba(27,42,74,0.03);';
+  const tdRef = 'padding:6px 8px; font-size:11px; text-align:center; border:1px solid var(--border-light); color:var(--text-muted);';
+
+  container.innerHTML = `
+    <div class="hoja-rayada" style="padding: 20px; overflow-x:auto;">
+      <h3 style="text-align:center; font-family:var(--serif); margin-bottom:5px;">ESTADO DE EVOLUCIÓN DEL PATRIMONIO NETO${modelLabel || ''}</h3>
+      <p style="text-align:center; font-size:12px; color:var(--text-muted); margin-bottom:5px;">Por el ejercicio finalizado al cierre</p>
+      <p style="text-align:center; font-size:11px; color:var(--text-muted); margin-bottom:20px;">Cifras expresadas en pesos</p>
+      
+      <table style="width:100%; border-collapse:collapse; min-width:1100px; font-size:12px;">
+        <thead>
+          <tr>
+            <th rowspan="3" style="${thStyle} width:30px;">Ref.</th>
+            <th rowspan="3" style="${thStyle} width:180px; text-align:left;">Rubros</th>
+            <th colspan="5" style="${thStyle}">Aportes de los propietarios</th>
+            <th colspan="4" style="${thStyle}">Resultados acumulados</th>
+            <th colspan="2" style="${thStyle}">Totales</th>
+          </tr>
+          <tr>
+            <th rowspan="2" style="${thStyle}">Capital suscripto</th>
+            <th rowspan="2" style="${thStyle}">Ajuste del capital</th>
+            <th rowspan="2" style="${thStyle}">Aportes irrevocables</th>
+            <th rowspan="2" style="${thStyle}">Primas de emisión</th>
+            <th rowspan="2" style="${thStyle}">Total</th>
+            <th colspan="2" style="${thStyle}">Ganancias reservadas</th>
+            <th rowspan="2" style="${thStyle}">Resultados no asignados</th>
+            <th rowspan="2" style="${thStyle}">Resultados diferidos</th>
+            <th rowspan="2" style="${thStyle}">Actual</th>
+            <th rowspan="2" style="${thStyle}">Comparativo</th>
+          </tr>
+          <tr>
+            <th style="${thStyle}">Reserva legal</th>
+            <th style="${thStyle}">Otras reservas</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td style="${tdRef}">(2)</td>
+            <td style="${tdBold}">Saldos al inicio del ejercicio</td>
+            <td style="${tdStyle}"></td><td style="${tdStyle}"></td><td style="${tdStyle}"></td><td style="${tdStyle}"></td><td style="${tdStyle}"></td>
+            <td style="${tdStyle}"></td><td style="${tdStyle}"></td><td style="${tdStyle}"></td><td style="${tdStyle}"></td>
+            <td style="${tdStyle}"></td><td style="${tdStyle}"></td>
+          </tr>
+          <tr>
+            <td style="${tdRef}"></td>
+            <td style="${tdLabel} padding-left:20px;">Modificación de saldos al inicio del ejercicio (Nota 1.6)</td>
+            <td style="${tdStyle}"></td><td style="${tdStyle}"></td><td style="${tdStyle}"></td><td style="${tdStyle}"></td><td style="${tdStyle}"></td>
+            <td style="${tdStyle}"></td><td style="${tdStyle}"></td><td style="${tdStyle}"></td><td style="${tdStyle}"></td>
+            <td style="${tdStyle}"></td><td style="${tdStyle}"></td>
+          </tr>
+          <tr>
+            <td style="${tdRef}">(2)</td>
+            <td style="${tdBold}">Saldos al inicio del ejercicio modificados</td>
+            <td style="${tdBoldR}"></td><td style="${tdBoldR}"></td><td style="${tdBoldR}"></td><td style="${tdBoldR}"></td><td style="${tdBoldR}"></td>
+            <td style="${tdBoldR}"></td><td style="${tdBoldR}"></td><td style="${tdBoldR}"></td><td style="${tdBoldR}"></td>
+            <td style="${tdBoldR}"></td><td style="${tdBoldR}"></td>
+          </tr>
+          <tr>
+            <td style="${tdRef}"></td>
+            <td style="${tdLabel} padding-left:20px;">Suscripción de capital social (*)</td>
+            <td style="${tdStyle}">${fmt(capital)}</td><td style="${tdStyle}">${fmt(ajusteCapital)}</td><td style="${tdStyle}">${fmt(aportes)}</td><td style="${tdStyle}">${fmt(primas)}</td><td style="${tdStyle}">${fmt(totalAportes)}</td>
+            <td style="${tdStyle}"></td><td style="${tdStyle}"></td><td style="${tdStyle}"></td><td style="${tdStyle}"></td>
+            <td style="${tdStyle}">${fmt(totalAportes)}</td><td style="${tdStyle}"></td>
+          </tr>
+          <tr>
+            <td style="${tdRef}"></td>
+            <td style="${tdLabel} padding-left:20px;">Distribución de resultados no asignados (**)</td>
+            <td style="${tdStyle}"></td><td style="${tdStyle}"></td><td style="${tdStyle}"></td><td style="${tdStyle}"></td><td style="${tdStyle}"></td>
+            <td style="${tdStyle}"></td><td style="${tdStyle}"></td><td style="${tdStyle}"></td><td style="${tdStyle}"></td>
+            <td style="${tdStyle}"></td><td style="${tdStyle}"></td>
+          </tr>
+          <tr>
+            <td style="${tdRef}"></td>
+            <td style="${tdLabel} padding-left:36px;">a Reserva legal / Otras reservas</td>
+            <td style="${tdStyle}"></td><td style="${tdStyle}"></td><td style="${tdStyle}"></td><td style="${tdStyle}"></td><td style="${tdStyle}"></td>
+            <td style="${tdStyle}">${fmt(resLegal)}</td><td style="${tdStyle}">${fmt(otrasReservas)}</td><td style="${tdStyle}"></td><td style="${tdStyle}"></td>
+            <td style="${tdStyle}">${fmt(resLegal + otrasReservas)}</td><td style="${tdStyle}"></td>
+          </tr>
+          <tr>
+            <td style="${tdRef}"></td>
+            <td style="${tdLabel} padding-left:36px;">a Dividendos en efectivo</td>
+            <td style="${tdStyle}"></td><td style="${tdStyle}"></td><td style="${tdStyle}"></td><td style="${tdStyle}"></td><td style="${tdStyle}"></td>
+            <td style="${tdStyle}"></td><td style="${tdStyle}"></td><td style="${tdStyle}"></td><td style="${tdStyle}"></td>
+            <td style="${tdStyle}"></td><td style="${tdStyle}"></td>
+          </tr>
+          <tr>
+            <td style="${tdRef}"></td>
+            <td style="${tdLabel} padding-left:36px;">a Dividendos en acciones</td>
+            <td style="${tdStyle}"></td><td style="${tdStyle}"></td><td style="${tdStyle}"></td><td style="${tdStyle}"></td><td style="${tdStyle}"></td>
+            <td style="${tdStyle}"></td><td style="${tdStyle}"></td><td style="${tdStyle}"></td><td style="${tdStyle}"></td>
+            <td style="${tdStyle}"></td><td style="${tdStyle}"></td>
+          </tr>
+          <tr>
+            <td style="${tdRef}"></td>
+            <td style="${tdLabel} padding-left:20px;">Ganancia (Pérdida) del ejercicio</td>
+            <td style="${tdStyle}"></td><td style="${tdStyle}"></td><td style="${tdStyle}"></td><td style="${tdStyle}"></td><td style="${tdStyle}"></td>
+            <td style="${tdStyle}"></td><td style="${tdStyle}"></td><td style="${tdStyle}">${fmtP(resultadoEjercicio)}</td><td style="${tdStyle}"></td>
+            <td style="${tdStyle}">${fmtP(resultadoEjercicio)}</td><td style="${tdStyle}"></td>
+          </tr>
+          <tr>
+            <td style="${tdRef}">(4)</td>
+            <td style="${tdBold}">Saldos al cierre del ejercicio</td>
+            <td style="${tdBoldR}">${fmt(capital)}</td>
+            <td style="${tdBoldR}">${fmt(ajusteCapital)}</td>
+            <td style="${tdBoldR}">${fmt(aportes)}</td>
+            <td style="${tdBoldR}">${fmt(primas)}</td>
+            <td style="${tdBoldR}">${fmt(totalAportes)}</td>
+            <td style="${tdBoldR}">${fmt(resLegal)}</td>
+            <td style="${tdBoldR}">${fmt(otrasReservas)}</td>
+            <td style="${tdBoldR}">${fmtP(resNoAsignados + resultadoEjercicio)}</td>
+            <td style="${tdBoldR}">${fmt(resDiferidos)}</td>
+            <td style="${tdBoldR}">${fmtP(totalActual)}</td>
+            <td style="${tdBoldR}"></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  `;
 }
 
 /* ══════════════════════════════════════════
