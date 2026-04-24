@@ -1,6 +1,11 @@
 const supabaseUrl = 'https://noluhzobkdqyfbyovfqj.supabase.co';
 const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5vbHVoem9ia2RxeWZieW92ZnFqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUyNDk2MDgsImV4cCI6MjA5MDgyNTYwOH0.WiTKdjtIEY7faHL2Wb3LsZ8xDXGC2td2B8kUqwyPUNQ';
-const db = window.supabase.createClient(supabaseUrl, supabaseKey);
+const db = window.supabase.createClient(supabaseUrl, supabaseKey, {
+  auth: {
+    autoRefreshToken: true,
+    persistSession: true
+  }
+});
 
 /* ══════════════════════════════════════════
    ESTADO GLOBAL Y AUTENTICACIÓN
@@ -82,7 +87,7 @@ async function verificarAprobacion(session) {
 
   // Verificar cada 30 segundos que la sesión siga siendo válida
   if (sessionCheckInterval) clearInterval(sessionCheckInterval);
-  sessionCheckInterval = setInterval(verificarSesionActiva, 30000);
+ sessionCheckInterval = setInterval(verificarSesionActiva, 120000);
 }
 
 async function verificarSesionActiva() {
@@ -756,6 +761,38 @@ function getCoef(mesOrigen) {
   return (idxC > 0 && idxO > 0) ? idxC / idxO : 1;
 }
 
+function getMesCompraDelBienDeUso(nombreCuenta) {
+  let nombreBien = '';
+  const lower = nombreCuenta.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+  if (lower.startsWith('depreciacion acumulada ')) {
+    nombreBien = nombreCuenta.substring('depreciacion acumulada '.length).trim().toLowerCase();
+  } else if (lower.startsWith('depreciacion ')) {
+    nombreBien = nombreCuenta.substring('depreciacion '.length).trim().toLowerCase();
+  }
+  
+  if (!nombreBien) return null;
+  
+  // Buscar en el libro diario una cuenta de bienes de uso que CONTENGA el nombre extraído
+  for (let a of asientos) {
+    if (!a || a.esCierre) continue;
+    for (let d of (a.debe || [])) {
+      if (d.cuenta.toLowerCase().includes(nombreBien)) {
+        // Verificar que sea del rubro bienes de uso
+        const cta = cuentas.find(c => c.nombre.toLowerCase() === d.cuenta.toLowerCase());
+        if (cta && cta.rubro && cta.rubro.toLowerCase().includes('bienes de uso')) {
+          return mesLabel(a.fecha);
+        }
+      }
+    }
+  }
+  return null;
+}
+
+function esDepreciacion(nombreCuenta) {
+  const lower = nombreCuenta.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+  return lower.startsWith('depreciacion acumulada ') || lower.startsWith('depreciacion ');
+}
+
 function renderInflacion(el) {
   if (asientos.length === 0) {
     el.innerHTML = '<div class="inflacion-toolbar"><h2>Ajuste por Inflación</h2></div><div class="inflacion-empty">No hay asientos en el Libro Diario. Cargá asientos para trabajar con el ajuste.</div>';
@@ -886,6 +923,34 @@ function renderInflacion(el) {
             lineIdx++;
           }
         });
+     }
+    } else if (esDepreciacion(cuenta.nombre)) {
+      const mesOrigen = getMesCompraDelBienDeUso(cuenta.nombre);
+      let tD = 0, tH = 0;
+      asientos.forEach(a => {
+        if (!a || a.esCierre) return;
+        (a.debe || []).forEach(d => { if (d.cuenta.toLowerCase() === cuenta.nombre.toLowerCase()) tD += d.monto; });
+        (a.haber || []).forEach(h => { if (h.cuenta.toLowerCase() === cuenta.nombre.toLowerCase()) tH += h.monto; });
+      });
+      const saldo = Math.abs(tD - tH);
+      if (saldo >= 0.01) {
+        const esD = tD >= tH;
+        const mesUsado = mesOrigen || mesLabel(asientos.find(a => a && !a.esCierre)?.fecha || '');
+        const coef = getCoef(mesUsado);
+        const reexp = saldo * coef;
+        const diff = Math.abs(reexp - saldo);
+        let rD = 0, rH = 0;
+        if (diff >= 0.01) { if (esD) rH = diff; else rD = diff; }
+        recpamIndD += rD; recpamIndH += rH;
+        indirectoHTML += `<tr>
+          <td class="td-code">${cuenta.codigo}</td><td class="td-cuenta">${cuenta.nombre} <span style="font-size:10px;color:var(--forest)">(origen: ${mesUsado})</span></td>
+          <td class="td-num">${formatMoney(saldo)} <span style="font-size:10px;color:var(--text-muted)">${esD?'D':'A'}</span></td>
+          <td class="td-num" style="color:var(--text-muted)">${mesUsado}</td>
+          <td class="td-coef">${coef.toFixed(4)}</td>
+          <td class="td-num" style="font-weight:600">${formatMoney(reexp)}</td>
+          <td class="td-num">${rD > 0 ? formatMoney(rD) : ''}</td>
+          <td class="td-num">${rH > 0 ? formatMoney(rH) : ''}</td>
+        </tr>`;
       }
     } else {
       const movsPorMes = {};
