@@ -2403,3 +2403,536 @@ function renderEEPN(container, saldosCuentas, modelLabel) {
             <td style="${tdBoldR}">${fmtP(totalActual)}</td>
             <td style="${tdBoldR}"></td>
           </tr>
+        </tbody>
+      </table>
+    </div>
+  `;
+}
+
+/* ══════════════════════════════════════════
+   MEDICIÓN AL CIERRE (ACTUALIZADO CON V. LÍMITE)
+   ══════════════════════════════════════════ */
+function renderCierre(el) {
+  let tbodyHTML = '';
+  
+  if(cierreData.length === 0) {
+     cierreData.push({
+       cuenta: '', saldoCierre: '', 
+       crUnitario: '', cantCR: '', crTotal: '', 
+       vlUnitario: '', cantVL: '', vlTotal: '',
+       medicion: '', cuentaResultado: 'Resultado por tenencia'
+     });
+  }
+
+  cierreData.forEach((row, i) => {
+     const saldo = parseFloat(row.saldoCierre) || 0;
+     const med = parseFloat(row.medicion) || 0;
+     const resTenencia = med - saldo;
+     const resFormat = resTenencia !== 0 ? formatMoney(resTenencia) : '';
+     const colorRes = resTenencia < 0 ? 'var(--burgundy)' : 'var(--forest)';
+
+     tbodyHTML += `
+         <tr data-index="${i}" draggable="true" ondragstart="dragStartCierre(event, ${i})" ondragover="dragOverCierre(event)" ondrop="dropCierre(event, ${i})" ondragend="dragEndCierre(event)">
+           <td style="text-align:center; cursor:grab; color:var(--text-muted); user-select:none;" title="Arrastrá para reordenar">⋮⋮</td>
+           <td>
+             <div class="autocomplete-wrapper">
+             <input type="text" class="line-cuenta cierre-input" placeholder="Buscar..." value="${row.cuenta}" oninput="showAutocomplete(this); updateCierreData(${i}, 'cuenta', this.value)" onfocus="showAutocomplete(this)" style="width:100%;">
+             <div class="autocomplete-list"></div>
+           </div>
+         </td>
+         <td><input type="number" step="0.01" class="cierre-input r" value="${row.saldoCierre}" oninput="updateCierreData(${i}, 'saldoCierre', this.value)"></td>
+         
+         <td style="background:rgba(27,42,74,0.02)"><input type="number" step="0.01" class="cierre-input r" placeholder="Unit." value="${row.crUnitario}" oninput="updateCierreData(${i}, 'crUnitario', this.value)" style="width:90px;"></td>
+         <td style="background:rgba(27,42,74,0.02)"><input type="number" step="1" class="cierre-input r" placeholder="Cant." value="${row.cantCR}" oninput="updateCierreData(${i}, 'cantCR', this.value)" style="width:70px;"></td>
+         <td style="background:rgba(27,42,74,0.05); font-weight:600; text-align:right; padding-right:10px;">${row.crTotal ? formatMoney(row.crTotal) : '0.00'}</td>
+
+         <td style="background:rgba(180,83,9,0.02)"><input type="number" step="0.01" class="cierre-input r" placeholder="Unit." value="${row.vlUnitario}" oninput="updateCierreData(${i}, 'vlUnitario', this.value)" style="width:90px;"></td>
+         <td style="background:rgba(180,83,9,0.02)"><input type="number" step="1" class="cierre-input r" placeholder="Cant." value="${row.cantVL}" oninput="updateCierreData(${i}, 'cantVL', this.value)" style="width:70px;"></td>
+         <td style="background:rgba(180,83,9,0.05); font-weight:600; text-align:right; padding-right:10px;">${row.vlTotal ? formatMoney(row.vlTotal) : '0.00'}</td>
+
+         <td><input type="number" step="0.01" class="cierre-input r" placeholder="Medición" value="${row.medicion}" oninput="updateCierreData(${i}, 'medicion', this.value)"></td>
+         <td style="text-align:right; font-weight:700; color:${colorRes}; padding-right:14px; background:var(--surface-2);">${resFormat}</td>
+         <td>
+           <select class="cierre-input" style="font-size:11px;" onchange="updateCierreData(${i}, 'cuentaResultado', this.value)">
+             <option value="Resultado por tenencia" ${row.cuentaResultado === 'Resultado por tenencia' ? 'selected' : ''}>RxT</option>
+             <option value="Ajuste de capital para mantenimiento de la capacidad operativa" ${row.cuentaResultado === 'Ajuste de capital para mantenimiento de la capacidad operativa' ? 'selected' : ''}>Ajuste Cap. (MCO)</option>
+           </select>
+         </td>
+         <td><input type="text" class="cierre-input" placeholder="Observaciones..." value="${row.observaciones || ''}" oninput="updateCierreData(${i}, 'observaciones', this.value)" style="width:100%;font-size:11px;"></td>
+         <td><button class="btn-del-cierre" onclick="deleteCierreRow(${i})">×</button></td>
+       </tr>
+     `;
+  });
+
+  el.innerHTML = `
+    <div class="inflacion-toolbar">
+      <h2>Medición al Cierre</h2>
+      <button class="btn-asiento" onclick="addCierreRow()">+ Agregar fila</button>
+    </div>
+    <div class="ajuste-wrap">
+      <table class="ajuste-table cierre-table" style="min-width: 1300px; font-size:12px;">
+        <thead>
+          <tr>
+            <th rowspan="2" style="width:30px;"></th>
+           <th rowspan="2" style="width:220px; min-width:220px;">CUENTA</th>
+            <th rowspan="2" class="r">SALDO AL CIERRE</th>
+            <th colspan="3" style="background:var(--navy); color:#fff; text-align:center;">COSTO DE REPOSICIÓN</th>
+            <th colspan="3" style="background:#b45309; color:#fff; text-align:center;">VALOR LÍMITE</th>
+            <th rowspan="2" class="r">MEDICIÓN SELECC.</th>
+            <th rowspan="2" class="r">RES. POR TENENCIA</th>
+            <th rowspan="2">CTA. RESULTADO</th>
+            <th rowspan="2" style="min-width:150px">OBSERVACIONES</th>
+<th rowspan="2"></th>
+          </tr>
+          <tr>
+            <th class="sub r">Unitario</th><th class="sub r">Cant.</th><th class="sub r">Total</th>
+            <th class="sub r">Unitario</th><th class="sub r">Cant.</th><th class="sub r">Total</th>
+          </tr>
+        </thead>
+        <tbody>${tbodyHTML}</tbody>
+      </table>
+    </div>
+  `;
+}
+
+function updateCierreData(index, field, value) {
+  // 1. Actualizamos el dato en la memoria
+  cierreData[index][field] = value;
+
+  // 2. Realizamos los cálculos matemáticos
+  const unitCR = parseFloat(cierreData[index].crUnitario) || 0;
+  const cantCR = parseFloat(cierreData[index].cantCR) || 0;
+  cierreData[index].crTotal = unitCR * cantCR;
+
+  const unitVL = parseFloat(cierreData[index].vlUnitario) || 0;
+  const cantVL = parseFloat(cierreData[index].cantVL) || 0;
+  cierreData[index].vlTotal = unitVL * cantVL;
+
+  const saldo = parseFloat(cierreData[index].saldoCierre) || 0;
+  const med = parseFloat(cierreData[index].medicion) || 0;
+  const resTenencia = med - saldo;
+
+  // 3. Guardamos los cambios
+  saveData();
+
+  // 4. ACTUALIZACIÓN DINÁMICA: Buscamos la fila en el DOM para actualizar solo los totales
+  const row = document.querySelector(`.cierre-table tbody tr[data-index="${index}"]`);
+  if (row) {
+    // Actualizamos el total de Reposición (celda 5, antes era 4)
+    row.cells[5].textContent = cierreData[index].crTotal !== 0 ? formatMoney(cierreData[index].crTotal) : '0.00';
+    
+    // Actualizamos el total de Valor Límite (celda 8, antes era 7)
+    row.cells[8].textContent = cierreData[index].vlTotal !== 0 ? formatMoney(cierreData[index].vlTotal) : '0.00';
+    
+    // Actualizamos el Resultado por Tenencia (celda 10, antes era 9)
+    const tdRes = row.cells[10];
+    tdRes.textContent = resTenencia !== 0 ? formatMoney(resTenencia) : '';
+    tdRes.style.color = resTenencia < 0 ? 'var(--burgundy)' : 'var(--forest)';
+  }
+}
+
+function addCierreRow() {
+  cierreData.push({cuenta: '', saldoCierre: '', crUnitario: '', crTotal: '', medicion: '', cuentaResultado: 'Resultado por tenencia'});
+  saveData();
+  renderCierre(document.getElementById('contentArea'));
+}
+
+function deleteCierreRow(index) {
+  cierreData.splice(index, 1);
+  saveData();
+  renderCierre(document.getElementById('contentArea'));
+}
+
+let dragIndexCierre = null;
+
+function dragStartCierre(e, idx) {
+  dragIndexCierre = idx;
+  e.dataTransfer.effectAllowed = 'move';
+  e.currentTarget.style.opacity = '0.4';
+}
+
+function dragOverCierre(e) {
+  e.preventDefault();
+  e.dataTransfer.dropEffect = 'move';
+  return false;
+}
+
+function dropCierre(e, idx) {
+  e.preventDefault();
+  e.stopPropagation();
+  if (dragIndexCierre === null || dragIndexCierre === idx) return false;
+  
+  const movedRow = cierreData[dragIndexCierre];
+  cierreData.splice(dragIndexCierre, 1);
+  cierreData.splice(idx, 0, movedRow);
+  
+  saveData();
+  renderCierre(document.getElementById('contentArea'));
+  return false;
+}
+
+function dragEndCierre(e) {
+  e.currentTarget.style.opacity = '1';
+  dragIndexCierre = null;
+}
+ensurePNCuentas();
+
+// INICIALIZACIÓN
+renderDashboard(document.getElementById('contentArea'));
+
+/* ══════════════════════════════════════════
+   REPORTE GENERAL UNIFICADO (EDICIÓN FINAL)
+   ══════════════════════════════════════════ */
+function generarReporte() {
+  try {
+    if (asientos.length === 0) {
+      alert('El sistema está vacío. Cargá al menos un asiento para imprimir el reporte.');
+      return;
+    }
+    
+    const alumno = prompt('Ingresá tu Apellido y Nombre para el encabezado del reporte:', 'Apellido, Nombre');
+    if (!alumno) return;
+
+    let printArea = document.getElementById('print-area');
+    if (!printArea) {
+      printArea = document.createElement('div');
+      printArea.id = 'print-area';
+      document.body.appendChild(printArea);
+    }
+
+    const tempDiv = document.createElement('div');
+    tempDiv.style.display = 'none';
+    document.body.appendChild(tempDiv);
+    
+    // 1. LIBRO DIARIO
+    renderDiario(tempDiv);
+    tempDiv.querySelectorAll('.btn-edit-asiento, .btn-del-asiento, .diario-toolbar').forEach(el => el.remove());
+    const diarioHTML = tempDiv.innerHTML;
+
+    // 2. LIBROS MAYORES
+    const cuentasMap = {};
+    asientos.forEach(a => {
+      if (!a) return;
+      (a.debe || []).forEach(d => {
+        const key = d.cuenta.toLowerCase();
+        if (!cuentasMap[key]) cuentasMap[key] = { nombre: d.cuenta, movimientos: [] };
+        cuentasMap[key].movimientos.push({ fecha: a.fecha, detalle: a.glosa || '—', debe: d.monto, haber: 0 });
+      });
+      (a.haber || []).forEach(h => {
+        const key = h.cuenta.toLowerCase();
+        if (!cuentasMap[key]) cuentasMap[key] = { nombre: h.cuenta, movimientos: [] };
+        cuentasMap[key].movimientos.push({ fecha: a.fecha, detalle: a.glosa || '—', debe: 0, haber: h.monto });
+      });
+    });
+    const cuentasList = Object.values(cuentasMap).map(c => {
+      const plan = cuentas.find(p => p.nombre.toLowerCase() === c.nombre.toLowerCase());
+      const tD = c.movimientos.reduce((s, m) => s + m.debe, 0);
+      const tH = c.movimientos.reduce((s, m) => s + m.haber, 0);
+      return { codigo: plan ? plan.codigo : '—', nombre: c.nombre, movimientos: c.movimientos, totalDebe: tD, totalHaber: tH, saldo: Math.abs(tD-tH), tipo: tD>=tH?'deudor':'acreedor' };
+    });
+    let mayoresHTML = '<div style="display:grid; grid-template-columns: 1fr 1fr; gap:15px;">';
+    mayoresHTML += cuentasList.map(c => `
+      <div class="mayor-card" style="opacity:1!important; break-inside:avoid; border:1px solid #ddd; padding:10px; font-size:11px;">
+        <div style="font-weight:700; border-bottom:1px solid #eee; margin-bottom:5px;">${c.codigo} - ${c.nombre}</div>
+        <table style="width:100%; border-collapse:collapse;">
+          ${c.movimientos.map(m => `<tr><td>${formatDate(m.fecha)}</td><td style="text-align:right">${m.debe>0?formatMoney(m.debe):''}</td><td style="text-align:right">${m.haber>0?formatMoney(m.haber):''}</td></tr>`).join('')}
+          <tr style="border-top:1px solid #ccc; font-weight:700"><td>Saldo ${c.tipo}</td><td colspan="2" style="text-align:right">${formatMoney(c.saldo)}</td></tr>
+        </table>
+      </div>`).join('');
+    mayoresHTML += '</div>';
+
+    // 3. AJUSTE POR INFLACIÓN (RECPAM)
+    renderInflacion(tempDiv);
+    tempDiv.querySelectorAll('.inflacion-toolbar, .cierre-config, .coef-panel, .rc-item').forEach(el => el.remove());
+    const inflacionHTML = tempDiv.innerHTML;
+
+    // 4. STOCK (PEPS)
+    renderStock(tempDiv);
+    tempDiv.querySelectorAll('.stock-toolbar').forEach(el => el.remove());
+    const stockHTML = tempDiv.innerHTML;
+
+    // 5. MEDICIÓN AL CIERRE
+    renderCierre(tempDiv);
+    tempDiv.querySelectorAll('.inflacion-toolbar, button, .btn-del-cierre').forEach(el => el.remove());
+    tempDiv.querySelectorAll('input, select').forEach(el => {
+        const span = document.createElement('span');
+        span.textContent = el.value || el.options?.[el.selectedIndex]?.text || '—';
+        el.parentNode.replaceChild(span, el);
+    });
+    const cierreHTML = tempDiv.innerHTML;
+
+    // 6. ESTADOS CONTABLES
+    const saldos = getSaldosPorCuenta();
+    renderESP(tempDiv, saldos);
+    const espHTML = tempDiv.innerHTML;
+    renderER(tempDiv, saldos);
+    const erHTML = tempDiv.innerHTML;
+
+    document.body.removeChild(tempDiv);
+
+    printArea.innerHTML = `
+      <div class="report-header">
+        <h1>REPORTE CONTABLE INTEGRAL</h1>
+        <p><strong>Alumno:</strong> ${alumno} | <strong>Fecha:</strong> ${new Date().toLocaleDateString('es-AR')}</p>
+      </div>
+      
+      <section class="report-section"><h3>1. Libro Diario</h3>${diarioHTML}</section>
+      <section class="report-section page-break"><h3>2. Libros Mayores</h3>${mayoresHTML}</section>
+      <section class="report-section page-break"><h3>3. Ajuste por Inflación (RECPAM)</h3>${inflacionHTML}</section>
+      <section class="report-section page-break"><h3>4. Fichas de Stock (PEPS)</h3>${stockHTML}</section>
+      <section class="report-section page-break"><h3>5. Medición al Cierre</h3>${cierreHTML}</section>
+      <section class="report-section page-break"><h3>6. Estado de Situación Patrimonial</h3>${espHTML}</section>
+      <section class="report-section page-break"><h3>7. Estado de Resultados</h3>${erHTML}</section>
+    `;
+    
+    setTimeout(() => {
+      window.print();
+      setTimeout(() => { printArea.innerHTML = ''; }, 1000);
+    }, 500);
+
+  } catch (error) {
+    alert('Error en reporte: ' + error.message);
+  }
+}
+/* ══════════════════════════════════════════
+   GESTIÓN DE ARCHIVOS (BACKUP Y RESTAURACIÓN)
+   ══════════════════════════════════════════ */
+
+function exportarDatos() {
+  try {
+    if (asientos.length === 0 && cuentas.length === 0) {
+      alert('El sistema está vacío. No hay datos para guardar.');
+      return;
+    }
+    
+    const data = {
+      asientos: asientos,
+      cuentas: cuentas,
+      indices: indices,
+      mesCierre: mesCierre,
+      modoInflacion: modoInflacion,
+      modelosData: modelosData,
+      cierreData: cierreData
+    };
+    
+    const jsonString = JSON.stringify(data, null, 2);
+    const blob = new Blob([jsonString], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    
+    const nombreArchivo = prompt("Ingresá el nombre para tu archivo (ej: Apellido_Consigna1):", "Trabajo_Contable");
+    if (!nombreArchivo) return;
+    
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = nombreArchivo + ".json";
+    document.body.appendChild(a);
+    a.click();
+    
+    setTimeout(() => {
+      document.body.removeChild(a);
+      window.URL.revokeObjectURL(url);
+    }, 100);
+    
+  } catch (error) {
+    alert("Error al exportar: " + error.message);
+  }
+}
+
+async function importarDatos(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  
+  if(!confirm('¿Estás seguro de cargar este archivo? Se borrarán los datos actuales de la pantalla.')) {
+    event.target.value = ''; 
+    return;
+  }
+
+  const reader = new FileReader();
+  reader.onload = async function(e) {
+    try {
+      const data = JSON.parse(e.target.result);
+      
+      asientos = data.asientos || [];
+      cuentas = data.cuentas || [];
+      indices = data.indices || {};
+      mesCierre = data.mesCierre || '';
+      modoInflacion = data.modoInflacion || 'indices';
+      modelosData = data.modelosData || {};
+      cierreData = data.cierreData || [];
+      ensurePNCuentas();
+      
+      await saveData();
+      alert('¡Trabajo cargado con éxito!');
+      navigate('home');
+    } catch (err) {
+      alert('Error: El archivo no es válido o está dañado. ' + err.message);
+    }
+  };
+  reader.readAsText(file);
+  event.target.value = '';
+}
+
+async function limpiarSistema() {
+  if(confirm('¿BORRAR TODO? Se perderán los asientos y el plan de cuentas. Asegurate de haber descargado tu JSON antes.')) {
+    asientos = [];
+    cuentas = [];
+    indices = {};
+    mesCierre = '';
+    modoInflacion = 'indices';
+    modelosData = {};
+    cierreData = [];
+    await saveData();
+    alert('Sistema limpio.');
+    navigate('home');
+  }
+}
+
+function revaluarLineasStock() {
+  // Buscamos todos los inputs de cuenta que estén abiertos en el modal
+  const inputsCuentas = document.querySelectorAll('.line-cuenta');
+  inputsCuentas.forEach(input => {
+    toggleStockFields(input);
+  });
+}
+/* ══════════════════════════════════════════
+   MINI PLAN - CREAR CUENTA DESDE EL MODAL
+   ══════════════════════════════════════════ */
+let mpInputOrigen = null;
+
+function openMiniPlan() {
+  document.querySelectorAll('.autocomplete-list').forEach(l => l.style.display = 'none');
+  mpInputOrigen = document.querySelector('.line-cuenta:focus') || document.querySelector('.line-cuenta');
+  document.getElementById('mpElemento').value = '';
+  document.getElementById('mpCorrencia').value = '';
+  document.getElementById('mpCorrencia').disabled = true;
+  document.getElementById('mpRubro').innerHTML = '<option value="">— Seleccionar —</option>';
+  document.getElementById('mpRubro').disabled = true;
+  document.getElementById('mpNombre').value = '';
+  document.getElementById('mpNombre').disabled = true;
+  document.getElementById('mpMonetaria').value = '';
+  document.getElementById('mpMonetaria').disabled = true;
+  document.getElementById('modalMiniPlan').classList.add('open');
+}
+
+function closeMiniPlan() {
+  document.getElementById('modalMiniPlan').classList.remove('open');
+}
+
+function mpOnElemento() {
+  const val = document.getElementById('mpElemento').value;
+  const elem = ELEMENTOS[val];
+  const selCorr = document.getElementById('mpCorrencia');
+  const selRubro = document.getElementById('mpRubro');
+  
+  selRubro.innerHTML = '<option value="">— Seleccionar —</option>';
+  selRubro.disabled = true;
+  document.getElementById('mpNombre').value = '';
+  document.getElementById('mpNombre').disabled = true;
+  document.getElementById('mpMonetaria').value = '';
+  document.getElementById('mpMonetaria').disabled = true;
+
+  if (!val) { selCorr.disabled = true; return; }
+
+  if (val === '3') {
+    alert('Las cuentas del Patrimonio Neto se generan automáticamente.');
+    document.getElementById('mpElemento').value = '';
+    selCorr.disabled = true;
+    return;
+  }
+
+  if (elem.tieneCorrencia) {
+    selCorr.disabled = false;
+    if (elem.subLabels) {
+      selCorr.innerHTML = '<option value="">— Seleccionar —</option>';
+      elem.subLabels.forEach(l => selCorr.innerHTML += '<option value="'+l+'">'+l+'</option>');
+    } else {
+      selCorr.innerHTML = '<option value="">— Seleccionar —</option><option value="Corriente">Corriente</option><option value="No corriente">No corriente</option>';
+    }
+  } else {
+    selCorr.disabled = true;
+    selCorr.innerHTML = '<option value="_skip_">—</option>';
+    selCorr.value = '_skip_';
+    const rubros = RUBROS[val]['_'] || [];
+    selRubro.innerHTML = '<option value="">— Seleccionar —</option>';
+    rubros.forEach(r => selRubro.innerHTML += '<option value="'+r+'">'+r+'</option>');
+    selRubro.disabled = false;
+  }
+}
+
+function mpOnCorrencia() {
+  const elemVal = document.getElementById('mpElemento').value;
+  const corrVal = document.getElementById('mpCorrencia').value;
+  const selRubro = document.getElementById('mpRubro');
+  
+  selRubro.innerHTML = '<option value="">— Seleccionar —</option>';
+  document.getElementById('mpNombre').value = '';
+  document.getElementById('mpNombre').disabled = true;
+  document.getElementById('mpMonetaria').value = '';
+  document.getElementById('mpMonetaria').disabled = true;
+
+  if (!corrVal) { selRubro.disabled = true; return; }
+
+  const rubros = RUBROS[elemVal]?.[corrVal] || [];
+  rubros.forEach(r => selRubro.innerHTML += '<option value="'+r+'">'+r+'</option>');
+  selRubro.disabled = false;
+}
+
+function mpOnRubro() {
+  const val = document.getElementById('mpRubro').value;
+  if (val) {
+    document.getElementById('mpNombre').disabled = false;
+    document.getElementById('mpNombre').focus();
+    document.getElementById('mpMonetaria').disabled = false;
+  } else {
+    document.getElementById('mpNombre').disabled = true;
+    document.getElementById('mpMonetaria').disabled = true;
+  }
+}
+
+function mpGuardar() {
+  const elemVal = document.getElementById('mpElemento').value;
+  const corrSel = document.getElementById('mpCorrencia');
+  const correncia = (!ELEMENTOS[elemVal].tieneCorrencia) ? '_' : corrSel.value;
+  const rubro = document.getElementById('mpRubro').value;
+  const nombre = document.getElementById('mpNombre').value.trim();
+  const tipoMoneda = document.getElementById('mpMonetaria').value;
+
+  if (!elemVal || !rubro || !nombre || !tipoMoneda) return alert('Completá todos los campos.');
+  if (ELEMENTOS[elemVal].tieneCorrencia && !correncia) return alert('Seleccioná la clasificación.');
+
+  const exists = cuentas.find(c => c.elemento === elemVal && c.correncia === correncia && c.rubro === rubro && c.nombre.toLowerCase() === nombre.toLowerCase());
+  if (exists) return alert('Ya existe esa cuenta.');
+
+  cuentas.push({ elemento: elemVal, correncia, rubro, nombre, codigo: '', tipoMoneda });
+  recalcCodes();
+  saveData();
+
+  closeMiniPlan();
+
+  if (mpInputOrigen) {
+    mpInputOrigen.value = nombre;
+    toggleStockFields(mpInputOrigen);
+  }
+
+  alert('Cuenta "' + nombre + '" creada con éxito.');
+}
+function toggleTheme() {
+  document.body.classList.toggle('dark-mode');
+  const isDark = document.body.classList.contains('dark-mode');
+  const btn = document.getElementById('themeToggle');
+  if (btn) btn.textContent = isDark ? '☀️' : '🌙';
+  
+  if (currentUser) {
+    db.from('perfiles').update({ tema: isDark ? 'dark' : 'light' }).eq('id', currentUser.id);
+  }
+}
+
+async function cargarTema() {
+  if (!currentUser) return;
+  const { data } = await db.from('perfiles').select('tema').eq('id', currentUser.id).single();
+  if (data && data.tema === 'dark') {
+    document.body.classList.add('dark-mode');
+    const btn = document.getElementById('themeToggle');
+    if (btn) btn.textContent = '☀️';
+  }
+}
