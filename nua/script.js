@@ -445,7 +445,7 @@ function showWelcome() {
   document.getElementById('mainInner').innerHTML =
     '<div class="welcome">' +
     '<div class="welcome-icon"><svg width="64" height="64" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M21 4.5C19.5 4 18.2 3.8 17 3.8c-1.8 0-3.8.5-5 1.7C10.8 4.3 8.8 3.8 7 3.8c-1.2 0-2.5.2-4 .7v14c1.5-.5 2.8-.7 4-.7 1.8 0 3.8.5 5 1.7 1.2-1.2 3.2-1.7 5-1.7 1.2 0 2.5.2 4 .7V4.5z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M12 5.5v14" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></div>' +
-    '<h2>RT 59 \u2014 Norma Unificada Argentina</h2>' +
+    '<h2>RT 54 \u2014 Norma Unificada Argentina</h2>' +
     '<p>Explor\u00e1 la Resoluci\u00f3n T\u00e9cnica N\u00b0 54 (T.O. RT 59) de forma interactiva. Seleccion\u00e1 un cap\u00edtulo en el men\u00fa lateral o busc\u00e1 por n\u00famero de p\u00e1rrafo o palabra clave.</p>' +
     '<div class="stats">' +
     '<div class="stat"><div class="stat-num">' + tc + '</div><div class="stat-label">Cap\u00edtulos</div></div>' +
